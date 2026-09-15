@@ -1,0 +1,265 @@
+{
+  "entities": {
+    "users": {
+      "title": "User",
+      "description": "User profile with role-based access control",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "plans": {
+      "title": "Plan",
+      "description": "Configurable subscription plans",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "billingCycle": { "type": "string" },
+        "gstRate": { "type": "number" },
+        "maxProjects": { "type": "number" },
+        "maxDomains": { "type": "number" },
+        "maxSubdomains": { "type": "number" },
+        "maxDeployments": { "type": "number" },
+        "storageLimit": { "type": "string" },
+        "bandwidthLimit": { "type": "string" },
+        "features": { "type": "array", "items": { "type": "string" } },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "price", "active"]
+    },
+    "subscriptions": {
+      "title": "Subscription",
+      "description": "User subscription records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "planId": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "past_due", "cancelled", "expired", "payment_failed"] },
+        "provider": { "type": "string" },
+        "razorpaySubscriptionId": { "type": "string" },
+        "currentPeriodStart": { "type": "string" },
+        "currentPeriodEnd": { "type": "string" },
+        "cancelAtPeriodEnd": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "planId", "status"]
+    },
+    "projects": {
+      "title": "Project",
+      "description": "User projects deployed via Vercel",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "repositoryId": { "type": "string" },
+        "repositoryName": { "type": "string" },
+        "repositoryOwner": { "type": "string" },
+        "repositoryUrl": { "type": "string" },
+        "branch": { "type": "string" },
+        "framework": { "type": "string" },
+        "buildCommand": { "type": "string" },
+        "outputDirectory": { "type": "string" },
+        "installCommand": { "type": "string" },
+        "vercelProjectId": { "type": "string" },
+        "productionDeploymentId": { "type": "string" },
+        "vivexaSubdomain": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "name"]
+    },
+    "deployments": {
+      "title": "Deployment",
+      "description": "Project deployment events and status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "userId": { "type": "string" },
+        "vercelDeploymentId": { "type": "string" },
+        "commitHash": { "type": "string" },
+        "commitMessage": { "type": "string" },
+        "branch": { "type": "string" },
+        "status": { "type": "string", "enum": ["QUEUED", "BUILDING", "READY", "ERROR", "CANCELED"] },
+        "url": { "type": "string" },
+        "vivexaUrl": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "projectId", "userId", "status"]
+    },
+    "domains": {
+      "title": "Domain",
+      "description": "Custom domains connected to projects",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "projectId": { "type": "string" },
+        "domain": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "verifying", "active", "error", "removed"] },
+        "dnsRecordType": { "type": "string" },
+        "dnsHost": { "type": "string" },
+        "dnsValue": { "type": "string" },
+        "verifiedAt": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "projectId", "domain", "status"]
+    },
+    "subdomains": {
+      "title": "Subdomain",
+      "description": "Vivexa subdomains registered under vivexatech.in",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "subdomain": { "type": "string" },
+        "fullSubdomain": { "type": "string" },
+        "projectId": { "type": "string" },
+        "userId": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "subdomain", "fullSubdomain", "projectId", "userId"]
+    },
+    "payments": {
+      "title": "Payment",
+      "description": "Payment records from Razorpay",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "subscriptionId": { "type": "string" },
+        "planId": { "type": "string" },
+        "razorpayOrderId": { "type": "string" },
+        "razorpayPaymentId": { "type": "string" },
+        "razorpaySignature": { "type": "string" },
+        "amount": { "type": "number" },
+        "subtotal": { "type": "number" },
+        "gstRate": { "type": "number" },
+        "gstAmount": { "type": "number" },
+        "currency": { "type": "string" },
+        "status": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "amount", "status"]
+    },
+    "invoices": {
+      "title": "Invoice",
+      "description": "GST invoices issued for payments",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "userId": { "type": "string" },
+        "paymentId": { "type": "string" },
+        "subscriptionId": { "type": "string" },
+        "planId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "subtotal": { "type": "number" },
+        "gstRate": { "type": "number" },
+        "gstAmount": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "currency": { "type": "string" },
+        "status": { "type": "string" },
+        "issuedAt": { "type": "string" },
+        "pdfReference": { "type": "string" }
+      },
+      "required": ["id", "invoiceNumber", "userId", "totalAmount", "status"]
+    },
+    "auditLogs": {
+      "title": "AuditLog",
+      "description": "System event and security audit logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "object" },
+        "ip": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "action", "createdAt"]
+    },
+    "notifications": {
+      "title": "Notification",
+      "description": "In-app user notifications",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "title", "message"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "users",
+      "description": "User profile records"
+    },
+    "/plans/{planId}": {
+      "schema": "plans",
+      "description": "Subscription plans"
+    },
+    "/subscriptions/{subscriptionId}": {
+      "schema": "subscriptions",
+      "description": "User subscription records"
+    },
+    "/projects/{projectId}": {
+      "schema": "projects",
+      "description": "Projects hosted on the platform"
+    },
+    "/deployments/{deploymentId}": {
+      "schema": "deployments",
+      "description": "Deployment history"
+    },
+    "/domains/{domainId}": {
+      "schema": "domains",
+      "description": "Custom domains"
+    },
+    "/subdomains/{subdomainId}": {
+      "schema": "subdomains",
+      "description": "Subdomain registry"
+    },
+    "/payments/{paymentId}": {
+      "schema": "payments",
+      "description": "Payment transactions"
+    },
+    "/invoices/{invoiceId}": {
+      "schema": "invoices",
+      "description": "Invoices with GST"
+    },
+    "/auditLogs/{logId}": {
+      "schema": "auditLogs",
+      "description": "System audit trail"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "notifications",
+      "description": "User notifications"
+    }
+  }
+}
