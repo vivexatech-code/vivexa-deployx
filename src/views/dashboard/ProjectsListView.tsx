@@ -56,7 +56,8 @@ export const ProjectsListView: React.FC = () => {
   const filtered = projects.filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.vivexaSubdomain.toLowerCase().includes(search.toLowerCase())
+      (p.productionUrl && p.productionUrl.toLowerCase().includes(search.toLowerCase())) ||
+      (p.customDomains && p.customDomains.some((d) => d.toLowerCase().includes(search.toLowerCase())))
   );
 
   return (
@@ -147,10 +148,16 @@ export const ProjectsListView: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Subdomain URL */}
+                {/* Domain or Vercel URL */}
                 <div className="flex items-center gap-1.5 text-xs text-indigo-600 font-mono mb-4 truncate">
                   <Globe className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">{p.vivexaSubdomain}</span>
+                  <span className="truncate">
+                    {p.customDomains && p.customDomains.length > 0
+                      ? p.customDomains[0]
+                      : p.productionUrl
+                      ? p.productionUrl.replace(/^https?:\/\//, '')
+                      : 'No custom domain'}
+                  </span>
                 </div>
 
                 <div className="space-y-1.5 text-[11px] text-slate-500 pt-3 border-t border-slate-100">

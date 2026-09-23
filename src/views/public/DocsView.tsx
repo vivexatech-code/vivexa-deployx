@@ -1,5 +1,4 @@
 import React from 'react';
-import { ROOT_DOMAIN } from '../../config/constants';
 import { BookOpen, Terminal, Globe, GitBranch, CreditCard, ShieldCheck } from 'lucide-react';
 
 export const DocsView: React.FC = () => {
@@ -82,21 +81,22 @@ export const DocsView: React.FC = () => {
           </p>
         </section>
 
-        {/* Section 3: Subdomains */}
+        {/* Section 3: Edge Deployment */}
         <section className="bg-white p-8 rounded-2xl border border-slate-200 shadow-2xs">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
               <Terminal className="w-4 h-4" />
             </div>
-            <h2 className="text-xl font-bold text-slate-900">3. Free Vivexa Subdomains (*.{ROOT_DOMAIN})</h2>
+            <h2 className="text-xl font-bold text-slate-900">3. Vercel Edge Deployment & Custom Domain Workflow</h2>
           </div>
           <p className="mb-3">
-            Every project has rights to a free subdomain under <code className="font-mono text-xs font-bold text-indigo-600">*.{ROOT_DOMAIN}</code>.
+            Every repository imported into Vivexa deploys to Vercel's global edge network:
           </p>
           <ul className="list-disc pl-5 space-y-1 text-xs text-slate-600">
-            <li>Subdomains must be between 3 and 32 characters, lowercase alphanumeric and hyphens.</li>
-            <li>System names (<code className="font-mono text-slate-800">admin, api, dashboard, mail, www</code>) are reserved.</li>
-            <li>Subdomain assignment is instantaneous without registrar DNS propagation delay.</li>
+            <li>Automatic build detection for Vite, Next.js, React, Astro, Vue, Svelte, and static HTML.</li>
+            <li>Instant deployment preview URLs to inspect build outputs before attaching production traffic.</li>
+            <li>Zero-downtime custom domain routing: once your deployment is READY, add your custom domain with instant verification.</li>
+            <li>Free automatic SSL certificates provisioned via Let's Encrypt at the edge for all connected custom domains.</li>
           </ul>
         </section>
 

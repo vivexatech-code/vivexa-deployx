@@ -3,7 +3,6 @@ import { useRouter } from '../../context/RouterContext';
 import { useAuth } from '../../context/AuthContext';
 import { projectService } from '../../services/project.service';
 import { domainService } from '../../services/domain.service';
-import { ROOT_DOMAIN } from '../../config/constants';
 import { Project, Deployment, DomainRecord } from '../../types';
 import {
   FolderGit2,
@@ -22,6 +21,7 @@ import {
   ArrowLeft,
   ShieldCheck,
   Settings,
+  Star,
 } from 'lucide-react';
 
 export const ProjectDetailView: React.FC = () => {
@@ -42,6 +42,7 @@ export const ProjectDetailView: React.FC = () => {
   const [addingDomain, setAddingDomain] = useState(false);
   const [domainError, setDomainError] = useState<string | null>(null);
   const [verifyingDomainId, setVerifyingDomainId] = useState<string | null>(null);
+  const [settingPrimaryId, setSettingPrimaryId] = useState<string | null>(null);
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
   // Env vars
@@ -62,7 +63,11 @@ export const ProjectDetailView: React.FC = () => {
       setDeployments(dList);
 
       const domList = await domainService.getProjectDomains(projectId);
-      setDomains(domList);
+      // Filter out legacy subdomain records
+      const customOnly = domList.filter(
+        (d) => d.type !== 'vivexa_subdomain' && !d.domain.endsWith('.vivexatech.in')
+      );
+      setDomains(customOnly);
     } catch (err) {
       console.error(err);
     } finally {
@@ -116,7 +121,7 @@ export const ProjectDetailView: React.FC = () => {
     try {
       const res = await domainService.verifyDomain(domainId);
       if (res.verified) {
-        alert('Domain verified successfully! SSL certificate is active.');
+        alert('Domain verified successfully! SSL certificate is active on Vercel edge network.');
       } else {
         alert(res.message || 'DNS record not yet resolved. Please allow a few minutes for propagation.');
       }
@@ -128,8 +133,20 @@ export const ProjectDetailView: React.FC = () => {
     }
   };
 
-  const handleDeleteDomain = async (domainId: string) => {
-    if (!user || !confirm('Remove this domain from your project?')) return;
+  const handleSetPrimary = async (domainId: string) => {
+    setSettingPrimaryId(domainId);
+    try {
+      await domainService.setPrimaryDomain(domainId);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || 'Failed to set primary domain');
+    } finally {
+      setSettingPrimaryId(null);
+    }
+  };
+
+  const handleDeleteDomain = async (domainId: string, domainName: string) => {
+    if (!user || !confirm(`Remove ${domainName} from this project?`)) return;
     try {
       await domainService.removeDomain(domainId, user.uid);
       setDomains((prev) => prev.filter((d) => d.id !== domainId));
@@ -171,7 +188,15 @@ export const ProjectDetailView: React.FC = () => {
     );
   }
 
-  const primaryUrl = `https://${project.vivexaSubdomain}`;
+  const primaryDomainRecord = domains.find((d) => d.isPrimary && (d.status === 'active' || d.verified))
+    || domains.find((d) => d.status === 'active' || d.verified)
+    || domains[0];
+
+  const primaryUrl = primaryDomainRecord
+    ? `https://${primaryDomainRecord.domain}`
+    : project.productionUrl
+    ? (project.productionUrl.startsWith('http') ? project.productionUrl : `https://${project.productionUrl}`)
+    : null;
 
   return (
     <div className="space-y-8">
@@ -204,18 +229,26 @@ export const ProjectDetailView: React.FC = () => {
               </span>
             </div>
 
-            <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 font-mono">
-              <a
-                href={primaryUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-indigo-600 hover:underline flex items-center gap-1 font-bold"
-              >
-                {project.vivexaSubdomain}
-                <ExternalLink className="w-3 h-3" />
-              </a>
+            <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 font-mono flex-wrap">
+              {primaryUrl ? (
+                <a
+                  href={primaryUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-indigo-600 hover:underline flex items-center gap-1 font-bold"
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  {primaryUrl.replace(/^https?:\/\//, '')}
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              ) : (
+                <span className="text-slate-400 flex items-center gap-1">
+                  <Globe className="w-3.5 h-3.5" />
+                  No custom domain connected
+                </span>
+              )}
               <span>&bull;</span>
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1 font-sans">
                 <GitBranch className="w-3.5 h-3.5" />
                 {project.branch}
               </span>
@@ -232,15 +265,17 @@ export const ProjectDetailView: React.FC = () => {
               <RefreshCw className={`w-3.5 h-3.5 ${redeploying ? 'animate-spin' : ''}`} />
               {redeploying ? 'Triggering...' : 'Redeploy'}
             </button>
-            <a
-              href={primaryUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm"
-            >
-              Visit Website
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
+            {primaryUrl && (
+              <a
+                href={primaryUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm"
+              >
+                Visit Website
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -258,7 +293,7 @@ export const ProjectDetailView: React.FC = () => {
                 : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            {tab === 'env' ? 'Environment Variables' : tab}
+            {tab === 'env' ? 'Environment Variables' : tab === 'domains' ? `Domains (${domains.length})` : tab}
           </button>
         ))}
       </div>
@@ -270,41 +305,68 @@ export const ProjectDetailView: React.FC = () => {
             {/* Live Preview Box */}
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
               <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs text-slate-500">
-                <span className="font-mono">{primaryUrl}</span>
-                <span className="inline-flex items-center gap-1 text-emerald-600 font-semibold text-[11px]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  Active on Vercel Edge
+                <span className="font-mono">
+                  {primaryUrl || 'Awaiting custom domain connection'}
                 </span>
+                {primaryDomainRecord?.status === 'active' || primaryDomainRecord?.verified ? (
+                  <span className="inline-flex items-center gap-1 text-emerald-600 font-semibold text-[11px]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    Live on Vercel Edge
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-amber-600 font-semibold text-[11px]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                    {project.status === 'READY' ? 'Ready for Custom Domain' : 'Build in Progress'}
+                  </span>
+                )}
               </div>
               <div className="p-8 text-center bg-slate-900 text-white min-h-[220px] flex flex-col items-center justify-center">
                 <Globe className="w-12 h-12 text-indigo-400 mb-3 opacity-90" />
                 <h3 className="text-lg font-bold mb-1">{project.name}</h3>
                 <p className="text-xs text-slate-400 max-w-sm font-mono mb-4">
-                  {project.vivexaSubdomain}
+                  {primaryUrl || 'No custom domain configured'}
                 </p>
-                <a
-                  href={primaryUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold inline-flex items-center gap-1.5 shadow-sm"
-                >
-                  Open Live Website
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
+                {primaryUrl ? (
+                  <a
+                    href={primaryUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold inline-flex items-center gap-1.5 shadow-sm"
+                  >
+                    Open Live Website
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => setActiveTab('domains')}
+                    className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Connect Custom Domain
+                  </button>
+                )}
               </div>
             </div>
 
             {/* Build Specifications */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs">
               <h3 className="text-sm font-bold text-slate-900 mb-4">Build Specifications</h3>
-              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs font-mono">
+              <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono">
                 <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
                   <dt className="text-slate-400 text-[10px] uppercase font-sans font-bold">Framework</dt>
-                  <dd className="font-semibold text-slate-800 mt-1 capitalize">{project.framework}</dd>
+                  <dd className="font-semibold text-slate-800 mt-1 capitalize">{project.framework || 'Static'}</dd>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                  <dt className="text-slate-400 text-[10px] uppercase font-sans font-bold">Root Directory</dt>
+                  <dd className="font-semibold text-slate-800 mt-1 truncate" title={project.rootDirectory || './'}>
+                    {project.rootDirectory ? `./${project.rootDirectory}` : './ (Root)'}
+                  </dd>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
                   <dt className="text-slate-400 text-[10px] uppercase font-sans font-bold">Build Command</dt>
-                  <dd className="font-semibold text-slate-800 mt-1">{project.buildCommand || 'npm run build'}</dd>
+                  <dd className="font-semibold text-slate-800 mt-1 truncate" title={project.buildCommand || 'None'}>
+                    {project.buildCommand || 'None (Static)'}
+                  </dd>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
                   <dt className="text-slate-400 text-[10px] uppercase font-sans font-bold">Output Directory</dt>
@@ -330,6 +392,10 @@ export const ProjectDetailView: React.FC = () => {
                   <span className="font-semibold text-slate-800">Branch:</span>{' '}
                   <span className="font-mono">{project.branch}</span>
                 </p>
+                <p>
+                  <span className="font-semibold text-slate-800">Root Directory:</span>{' '}
+                  <span className="font-mono">{project.rootDirectory ? `./${project.rootDirectory}` : './ (Root)'}</span>
+                </p>
                 {project.repositoryUrl && (
                   <a
                     href={project.repositoryUrl}
@@ -350,36 +416,20 @@ export const ProjectDetailView: React.FC = () => {
       {/* TAB: DOMAINS */}
       {activeTab === 'domains' && (
         <div className="space-y-8">
-          {/* Subdomain Card */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs">
-            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-              System Subdomain
-            </span>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 font-mono">
-                  {project.vivexaSubdomain}
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Managed wildcard edge routing &bull; Automatic SSL
-                </p>
-              </div>
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Active
-              </span>
-            </div>
-          </div>
-
           {/* Add Custom Domain Form */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
-            <h3 className="text-sm font-bold text-slate-900">Attach Custom Domain</h3>
+            <div className="flex items-center gap-2">
+              <Globe className="w-5 h-5 text-indigo-600" />
+              <h3 className="text-base font-bold text-slate-900">Connect Custom Domain</h3>
+            </div>
             <p className="text-xs text-slate-500">
-              Point your domain registrar (GoDaddy, Namecheap, Cloudflare) to our Vercel edge nodes.
+              Point your domain registrar (e.g. GoDaddy, Namecheap, Cloudflare, Google Domains) to Vercel's global edge network.
             </p>
 
             {domainError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-800">
-                {domainError}
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-800 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{domainError}</span>
               </div>
             )}
 
@@ -389,16 +439,16 @@ export const ProjectDetailView: React.FC = () => {
                 type="text"
                 value={newDomain}
                 onChange={(e) => setNewDomain(e.target.value)}
-                placeholder="mybrand.com or app.mybrand.com"
+                placeholder="e.g. mybrand.com or app.mybrand.com"
                 className="flex-1 px-3.5 py-2 rounded-lg border border-slate-300 font-mono text-xs focus:ring-2 focus:ring-indigo-600 focus:outline-none"
               />
               <button
                 id="btn-add-custom-domain"
                 type="submit"
-                disabled={addingDomain}
+                disabled={addingDomain || !newDomain.trim()}
                 className="px-5 py-2 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
               >
-                {addingDomain ? 'Attaching...' : 'Add Domain'}
+                {addingDomain ? 'Connecting...' : 'Add Domain'}
               </button>
             </form>
           </div>
@@ -407,89 +457,184 @@ export const ProjectDetailView: React.FC = () => {
           <div className="space-y-4">
             <h3 className="text-sm font-bold text-slate-900">Connected Custom Domains</h3>
             {domains.length === 0 ? (
-              <div className="p-8 text-center bg-white rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
-                No custom domains attached to this project yet.
+              <div className="p-10 text-center bg-white rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400 space-y-2">
+                <Globe className="w-8 h-8 mx-auto text-slate-300" />
+                <p className="font-semibold text-slate-700">No custom domains connected yet</p>
+                <p className="text-slate-400 max-w-sm mx-auto">
+                  Add your apex domain (e.g. yourdomain.com) or subdomain (e.g. app.yourdomain.com) above to route production visitors.
+                </p>
               </div>
             ) : (
-              domains.map((dom) => (
-                <div
-                  key={dom.id}
-                  className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-slate-900 font-mono">
-                          {dom.domainName}
-                        </span>
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            dom.status === 'active'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-amber-50 text-amber-700 border border-amber-200'
-                          }`}
-                        >
-                          {dom.status === 'active' ? 'Active' : 'Verification Required'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Added on {new Date(dom.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
+              domains.map((dom) => {
+                const isApex = dom.domain.split('.').length === 2;
+                const records = dom.dnsRecords && Array.isArray(dom.dnsRecords) && dom.dnsRecords.length > 0
+                  ? dom.dnsRecords
+                  : [
+                      {
+                        type: dom.dnsRecordType || (isApex ? 'A' : 'CNAME'),
+                        host: dom.dnsHost || (isApex ? '@' : dom.domain.split('.')[0]),
+                        value: dom.dnsValue || (isApex ? '76.76.21.21' : 'cname.vercel-dns.com'),
+                        status: dom.status,
+                      },
+                    ];
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleVerifyDomain(dom.id)}
-                        disabled={verifyingDomainId === dom.id}
-                        className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer disabled:opacity-50"
-                      >
-                        {verifyingDomainId === dom.id ? 'Checking...' : 'Verify DNS'}
-                      </button>
-                      <button
-                        onClick={() => handleDeleteDomain(dom.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 cursor-pointer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* DNS Record Helper Table */}
-                  <div className="pt-4 border-t border-slate-100">
-                    <p className="text-xs font-bold text-slate-700 mb-2">
-                      Required DNS Record (Add at your DNS provider):
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
-                      <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
-                        <span className="text-[10px] font-sans font-bold text-slate-400 block">TYPE</span>
-                        <span className="font-bold text-indigo-600">{dom.dnsRecords?.type || 'CNAME'}</span>
-                      </div>
-                      <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
-                        <span className="text-[10px] font-sans font-bold text-slate-400 block">HOST / NAME</span>
-                        <span className="font-semibold text-slate-800">{dom.dnsRecords?.host || '@'}</span>
-                      </div>
-                      <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between">
-                        <div>
-                          <span className="text-[10px] font-sans font-bold text-slate-400 block">VALUE / TARGET</span>
-                          <span className="font-semibold text-slate-800 truncate">
-                            {dom.dnsRecords?.value || 'cname.vercel-dns.com'}
+                return (
+                  <div
+                    key={dom.id}
+                    className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <span className="font-bold text-base text-slate-900 font-mono">
+                            {dom.domain}
+                          </span>
+                          {dom.isPrimary && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
+                              <Star className="w-2.5 h-2.5 fill-indigo-600" /> Primary
+                            </span>
+                          )}
+                          <span
+                            className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
+                              dom.status === 'active' || dom.verified
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-amber-50 text-amber-700 border border-amber-200'
+                            }`}
+                          >
+                            {dom.status === 'active' || dom.verified ? (
+                              <>
+                                <CheckCircle2 className="w-3 h-3" /> Active & Verified
+                              </>
+                            ) : (
+                              <>
+                                <AlertCircle className="w-3 h-3" /> DNS Verification Required
+                              </>
+                            )}
                           </span>
                         </div>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Connected on {new Date(dom.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {!dom.isPrimary && (dom.status === 'active' || dom.verified) && (
+                          <button
+                            onClick={() => handleSetPrimary(dom.id)}
+                            disabled={settingPrimaryId === dom.id}
+                            className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer disabled:opacity-50"
+                          >
+                            {settingPrimaryId === dom.id ? 'Setting...' : 'Set as Primary'}
+                          </button>
+                        )}
                         <button
-                          onClick={() => handleCopy(dom.dnsRecords?.value || 'cname.vercel-dns.com')}
-                          className="p-1 text-slate-400 hover:text-slate-800 cursor-pointer"
+                          onClick={() => handleVerifyDomain(dom.id)}
+                          disabled={verifyingDomainId === dom.id}
+                          className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                         >
-                          {copiedText === dom.dnsRecords?.value ? (
-                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          {verifyingDomainId === dom.id ? (
+                            <>
+                              <RefreshCw className="w-3 h-3 animate-spin text-indigo-600" />
+                              Checking...
+                            </>
                           ) : (
-                            <Copy className="w-3.5 h-3.5" />
+                            'Verify DNS'
                           )}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteDomain(dom.id, dom.domain)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 cursor-pointer"
+                          title="Remove Domain"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
+
+                    {/* DNS Records required table */}
+                    <div className="pt-4 border-t border-slate-100 space-y-2">
+                      <p className="text-xs font-bold text-slate-700">
+                        Required DNS Records (configure at your domain registrar):
+                      </p>
+                      <div className="space-y-2">
+                        {records.map((rec, idx) => (
+                          <div
+                            key={idx}
+                            className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono"
+                          >
+                            <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                              <span className="text-[10px] font-sans font-bold text-slate-400 block">TYPE</span>
+                              <span className="font-bold text-indigo-600">{rec.type}</span>
+                            </div>
+                            <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                              <span className="text-[10px] font-sans font-bold text-slate-400 block">HOST / NAME</span>
+                              <span className="font-semibold text-slate-800">{rec.host}</span>
+                            </div>
+                            <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between">
+                              <div className="min-w-0 pr-2">
+                                <span className="text-[10px] font-sans font-bold text-slate-400 block">VALUE / TARGET</span>
+                                <span className="font-semibold text-slate-800 truncate block">
+                                  {rec.value}
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => handleCopy(rec.value)}
+                                className="p-1 text-slate-400 hover:text-slate-800 cursor-pointer shrink-0"
+                                title="Copy Value"
+                              >
+                                {copiedText === rec.value ? (
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Vercel Domain Verification TXT if required */}
+                      {dom.verification && dom.verification.length > 0 && (
+                        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs space-y-1 font-sans">
+                          <p className="font-bold text-amber-900 flex items-center gap-1.5">
+                            <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                            Domain Verification Required
+                          </p>
+                          <p className="text-[11px] text-amber-800">
+                            Vercel requires an ownership verification record. Add the following TXT record to your DNS zone:
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 font-mono text-xs pt-1">
+                            <div className="p-1.5 bg-white rounded border border-amber-200">
+                              <span className="text-[9px] font-sans text-slate-400 block font-bold">TYPE</span>
+                              <span className="font-bold text-amber-700">TXT</span>
+                            </div>
+                            <div className="p-1.5 bg-white rounded border border-amber-200">
+                              <span className="text-[9px] font-sans text-slate-400 block font-bold">NAME</span>
+                              <span className="truncate block">{dom.verification[0].domain}</span>
+                            </div>
+                            <div className="p-1.5 bg-white rounded border border-amber-200 flex items-center justify-between">
+                              <div className="min-w-0 pr-2">
+                                <span className="text-[9px] font-sans text-slate-400 block font-bold">VALUE</span>
+                                <span className="truncate block">{dom.verification[0].value}</span>
+                              </div>
+                              <button
+                                onClick={() => handleCopy(dom.verification![0].value)}
+                                className="text-slate-400 hover:text-slate-800 p-1 cursor-pointer"
+                              >
+                                {copiedText === dom.verification[0].value ? (
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

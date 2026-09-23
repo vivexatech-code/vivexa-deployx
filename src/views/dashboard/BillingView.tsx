@@ -146,35 +146,51 @@ export const BillingView: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-slate-100">
           <div>
             <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-              Active Plan
+              Subscription Status
             </span>
             <div className="flex items-center gap-3 mt-1">
               <h2 className="text-2xl font-bold text-slate-900">
-                {currentPlan?.name || 'Starter Plan'}
+                {subscription?.status === 'active' && currentPlan
+                  ? `${currentPlan.name} Plan`
+                  : 'No Active Subscription'}
               </h2>
-              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                {subscription?.status === 'active' ? 'Active' : 'Current'}
-              </span>
+              {subscription?.status === 'active' && currentPlan ? (
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Active
+                </span>
+              ) : (
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-300">
+                  Inactive &bull; Payment Required
+                </span>
+              )}
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              ₹{currentPlan?.price || 499} / month + 18% GST &bull; Renews on{' '}
-              {subscription?.currentPeriodEnd
-                ? new Date(subscription.currentPeriodEnd).toLocaleDateString('en-IN')
-                : 'Next monthly billing cycle'}
+              {subscription?.status === 'active' && currentPlan ? (
+                <>
+                  ₹{currentPlan.price} / month + 18% GST &bull; Renews on{' '}
+                  {subscription?.currentPeriodEnd
+                    ? new Date(subscription.currentPeriodEnd).toLocaleDateString('en-IN')
+                    : 'Next monthly billing cycle'}
+                </>
+              ) : (
+                'Select and activate any plan below using secure Razorpay checkout to start deploying.'
+              )}
             </p>
           </div>
 
-          {subscription?.cancelAtPeriodEnd ? (
-            <span className="text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
-              Cancels at end of billing cycle
-            </span>
-          ) : (
-            <button
-              onClick={handleCancelSub}
-              className="text-xs font-medium text-slate-500 hover:text-rose-600 underline cursor-pointer"
-            >
-              Cancel renewal
-            </button>
+          {subscription?.status === 'active' && (
+            subscription?.cancelAtPeriodEnd ? (
+              <span className="text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
+                Cancels at end of billing cycle
+              </span>
+            ) : (
+              <button
+                onClick={handleCancelSub}
+                className="text-xs font-medium text-slate-500 hover:text-rose-600 underline cursor-pointer"
+              >
+                Cancel renewal
+              </button>
+            )
           )}
         </div>
 
@@ -217,11 +233,16 @@ export const BillingView: React.FC = () => {
 
       {/* Switch / Upgrade Plan Section */}
       <div className="space-y-4">
-        <h2 className="text-base font-bold text-slate-900">Change or Upgrade Plan</h2>
+        <h2 className="text-base font-bold text-slate-900">
+          {subscription?.status === 'active' ? 'Change or Upgrade Plan' : 'Select a Hosting Plan'}
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {plans.map((p) => {
-            const isCurrent = currentPlan?.id === p.id;
-            const gst = Number((p.price * 0.18).toFixed(2));
+            const isCurrent = subscription?.status === 'active' && currentPlan?.id === p.id;
+            const rawRate = p.gstRate !== undefined ? Number(p.gstRate) : 18;
+            const rateMultiplier = rawRate > 1 ? rawRate / 100 : rawRate;
+            const gstPercentage = rawRate > 1 ? rawRate : Math.round(rawRate * 100);
+            const gst = Number((p.price * rateMultiplier).toFixed(2));
             const total = (p.price + gst).toFixed(2);
             const isLoading = loadingPlanId === p.id;
 
@@ -248,7 +269,7 @@ export const BillingView: React.FC = () => {
                     ₹{p.price} <span className="text-xs font-normal text-slate-500">/ mo</span>
                   </div>
                   <p className="text-[11px] text-indigo-600 mb-4">
-                    + 18% GST (₹{gst}) = ₹{total} total
+                    + {gstPercentage}% GST (₹{gst}) = ₹{total} total
                   </p>
                 </div>
 
@@ -261,7 +282,13 @@ export const BillingView: React.FC = () => {
                       : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-2xs'
                   }`}
                 >
-                  {isCurrent ? 'Current Plan' : isLoading ? 'Processing...' : `Switch to ${p.name}`}
+                  {isCurrent
+                    ? 'Current Plan'
+                    : isLoading
+                    ? 'Processing...'
+                    : subscription?.status === 'active'
+                    ? `Switch to ${p.name}`
+                    : `Activate ${p.name}`}
                 </button>
               </div>
             );

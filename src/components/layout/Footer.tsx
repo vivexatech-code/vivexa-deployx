@@ -1,7 +1,6 @@
 import React from 'react';
 import { useRouter } from '../../context/RouterContext';
 import { Cloud, Heart } from 'lucide-react';
-import { ROOT_DOMAIN } from '../../config/constants';
 
 export const Footer: React.FC = () => {
   const { navigate } = useRouter();
@@ -20,10 +19,7 @@ export const Footer: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Modern developer hosting platform. Automatic GitHub deployments, Vercel edge network, free Vivexa subdomains, and 18% GST tax invoicing.
-            </p>
-            <p className="text-xs font-mono text-indigo-600 mt-2">
-              *.{ROOT_DOMAIN}
+              Modern developer hosting platform. Automatic GitHub deployments, Vercel edge network, branded custom domain routing, and 18% GST tax invoicing.
             </p>
           </div>
 

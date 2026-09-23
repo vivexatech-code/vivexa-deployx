@@ -39,7 +39,7 @@ export const AdminProjectsView: React.FC = () => {
                 <tr className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold border-b border-slate-200 font-sans">
                   <th className="py-3 px-6">Project Name</th>
                   <th className="py-3 px-6">Owner UID</th>
-                  <th className="py-3 px-6">Subdomain</th>
+                  <th className="py-3 px-6">Domains / URL</th>
                   <th className="py-3 px-6">Framework</th>
                   <th className="py-3 px-6">Status</th>
                   <th className="py-3 px-6">Created</th>
@@ -55,7 +55,11 @@ export const AdminProjectsView: React.FC = () => {
                       {p.userId}
                     </td>
                     <td className="py-3.5 px-6 text-indigo-600">
-                      https://{p.vivexaSubdomain}
+                      {p.customDomains && p.customDomains.length > 0
+                        ? p.customDomains.join(', ')
+                        : p.productionUrl
+                        ? p.productionUrl.replace(/^https?:\/\//, '')
+                        : 'No domain'}
                     </td>
                     <td className="py-3.5 px-6 font-sans capitalize text-slate-700">
                       {p.framework}

@@ -3,7 +3,6 @@ import { useRouter } from '../../context/RouterContext';
 import { useAuth } from '../../context/AuthContext';
 import { planService } from '../../services/plan.service';
 import { billingService } from '../../services/billing.service';
-import { ROOT_DOMAIN } from '../../config/constants';
 import { Plan } from '../../types';
 import { Check, ShieldCheck, HelpCircle } from 'lucide-react';
 
@@ -79,7 +78,10 @@ export const PricingView: React.FC = () => {
       {/* 3 Plans Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
         {plans.map((p) => {
-          const gst = Number((p.price * 0.18).toFixed(2));
+          const rawRate = p.gstRate !== undefined ? Number(p.gstRate) : 18;
+          const rateMultiplier = rawRate > 1 ? rawRate / 100 : rawRate;
+          const gstPercentage = rawRate > 1 ? rawRate : Math.round(rawRate * 100);
+          const gst = Number((p.price * rateMultiplier).toFixed(2));
           const total = (p.price + gst).toFixed(2);
           const isLoading = loadingPlanId === p.id;
 
@@ -115,7 +117,7 @@ export const PricingView: React.FC = () => {
                       <span className="font-semibold text-slate-900">₹{p.price}</span>
                     </div>
                     <div className="flex justify-between text-indigo-600 font-medium">
-                      <span>GST @ 18%:</span>
+                      <span>GST @ {gstPercentage}%:</span>
                       <span>₹{gst}</span>
                     </div>
                     <div className="flex justify-between font-bold text-slate-900 pt-1 border-t border-slate-200">
@@ -133,10 +135,6 @@ export const PricingView: React.FC = () => {
                   <li className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                     <span><strong>{p.maxDomains}</strong> Custom Domains</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span><strong>{p.maxSubdomains}</strong> Free *.{ROOT_DOMAIN} Subdomains</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-600 shrink-0" />

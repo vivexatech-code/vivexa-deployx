@@ -8,6 +8,24 @@ import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { GitHubRepo, GitHubBranch, GitHubConnection } from '../types';
 import { FRAMEWORK_PRESETS } from '../config/constants';
+import { getAuthHeaders } from './apiClient';
+
+export interface RepoInspectionResult {
+  success: boolean;
+  detectedFramework: string | null;
+  frameworkName: string;
+  buildCommand: string | null;
+  outputDirectory: string | null;
+  installCommand: string | null;
+  packageManager: 'npm' | 'pnpm' | 'yarn' | 'bun';
+  hasPackageJson: boolean;
+  isStatic: boolean;
+  rootDirectory: string;
+  rootDirectoryValid: boolean;
+  candidateRootDirectories: string[];
+  availableScripts: string[];
+  error?: string;
+}
 
 export const githubService = {
   /**
@@ -175,9 +193,10 @@ export const githubService = {
     if (!userId) return;
 
     try {
+      const authHeaders = await getAuthHeaders();
       await fetch('/api/github/disconnect', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
       });
     } catch (e) {
@@ -195,8 +214,10 @@ export const githubService = {
    * List repositories accessible to the user via server proxy
    */
   async getRepositories(userId: string, search = ''): Promise<GitHubRepo[]> {
+    const authHeaders = await getAuthHeaders();
     const res = await fetch(
-      `/api/github/repos?userId=${encodeURIComponent(userId)}&search=${encodeURIComponent(search)}`
+      `/api/github/repos?userId=${encodeURIComponent(userId)}&search=${encodeURIComponent(search)}`,
+      { headers: authHeaders }
     );
 
     if (!res.ok) {
@@ -214,8 +235,10 @@ export const githubService = {
    * List branches for a repository
    */
   async getBranches(userId: string, owner: string, repo: string): Promise<GitHubBranch[]> {
+    const authHeaders = await getAuthHeaders();
     const res = await fetch(
-      `/api/github/branches?userId=${encodeURIComponent(userId)}&owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`
+      `/api/github/branches?userId=${encodeURIComponent(userId)}&owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`,
+      { headers: authHeaders }
     );
 
     if (!res.ok) {
@@ -231,8 +254,10 @@ export const githubService = {
    */
   async detectFramework(userId: string, owner: string, repo: string): Promise<string> {
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(
-        `/api/github/detect-framework?userId=${encodeURIComponent(userId)}&owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`
+        `/api/github/detect-framework?userId=${encodeURIComponent(userId)}&owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`,
+        { headers: authHeaders }
       );
 
       if (res.ok) {
@@ -244,6 +269,51 @@ export const githubService = {
     }
 
     return 'vite';
+  },
+
+  /**
+   * Deeply inspect repository source, framework, build settings, package managers, and root directory
+   */
+  async inspectRepository(
+    userId: string,
+    owner: string,
+    repo: string,
+    branch = 'main',
+    rootDirectory = ''
+  ): Promise<RepoInspectionResult> {
+    try {
+      const authHeaders = await getAuthHeaders();
+      const res = await fetch('/api/hosting/inspect-repo', {
+        method: 'POST',
+        headers: {
+          ...authHeaders,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ owner, repo, branch, rootDirectory, userId }),
+      });
+
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn('Repository inspection error:', e);
+    }
+
+    return {
+      success: false,
+      detectedFramework: 'vite',
+      frameworkName: 'Vite',
+      buildCommand: 'npm run build',
+      outputDirectory: 'dist',
+      installCommand: 'npm install',
+      packageManager: 'npm',
+      hasPackageJson: true,
+      isStatic: false,
+      rootDirectory,
+      rootDirectoryValid: true,
+      candidateRootDirectories: [],
+      availableScripts: [],
+    };
   },
 
   /**

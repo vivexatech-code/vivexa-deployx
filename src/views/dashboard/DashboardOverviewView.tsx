@@ -26,8 +26,9 @@ export const DashboardOverviewView: React.FC = () => {
     projectsCount: number;
     domainsCount: number;
     deploymentsCount: number;
-    currentPlan: Plan;
+    currentPlan: Plan | null;
     subscription: Subscription | null;
+    hasActiveSubscription: boolean;
   } | null>(null);
 
   const [projects, setProjects] = useState<Project[]>([]);
@@ -65,13 +66,43 @@ export const DashboardOverviewView: React.FC = () => {
     );
   }
 
-  const { currentPlan, subscription } = usage;
+  const { currentPlan, subscription, hasActiveSubscription } = usage;
   const renewalDate = subscription?.currentPeriodEnd
     ? new Date(subscription.currentPeriodEnd).toLocaleDateString('en-IN')
-    : 'Monthly cycle';
+    : hasActiveSubscription ? 'Monthly cycle' : 'No active cycle';
 
   return (
     <div className="space-y-8">
+      {/* No active subscription callout banner */}
+      {!hasActiveSubscription && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="p-2.5 rounded-xl bg-amber-500/15 text-amber-700">
+              <CreditCard className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900">No Active Subscription</h3>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-200">
+                  Payment Required
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Choose a plan to start deploying and hosting your projects with custom domains, automatic SSL, and global edge network.
+              </p>
+            </div>
+          </div>
+          <button
+            id="overview-activate-plan-banner-btn"
+            onClick={() => navigate('/dashboard/billing')}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-sm whitespace-nowrap cursor-pointer"
+          >
+            Choose a Plan
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -86,7 +117,13 @@ export const DashboardOverviewView: React.FC = () => {
         <div className="flex items-center gap-3">
           <button
             id="overview-new-project-btn"
-            onClick={() => navigate('/dashboard/projects/new')}
+            onClick={() => {
+              if (!hasActiveSubscription) {
+                navigate('/dashboard/billing');
+                return;
+              }
+              navigate('/dashboard/projects/new');
+            }}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm cursor-pointer"
           >
             <Plus className="w-4 h-4" />
@@ -104,16 +141,22 @@ export const DashboardOverviewView: React.FC = () => {
             <CreditCard className="w-4 h-4 text-indigo-600" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">{currentPlan.name}</span>
-            <span className="text-xs text-slate-500">₹{currentPlan.price}/mo</span>
+            <span className="text-2xl font-bold text-slate-900">
+              {hasActiveSubscription && currentPlan ? currentPlan.name : 'No Plan'}
+            </span>
+            <span className="text-xs text-slate-500">
+              {hasActiveSubscription && (subscription?.price || currentPlan?.price)
+                ? `₹${subscription?.price ?? currentPlan?.price}/mo`
+                : 'Inactive'}
+            </span>
           </div>
           <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span>Renews: {renewalDate}</span>
+            <span>{hasActiveSubscription ? `Renews: ${renewalDate}` : 'No active plan'}</span>
             <button
               onClick={() => navigate('/dashboard/billing')}
               className="text-indigo-600 font-bold hover:underline cursor-pointer"
             >
-              Upgrade
+              {hasActiveSubscription ? 'Upgrade' : 'Choose Plan'}
             </button>
           </div>
         </div>
@@ -126,13 +169,13 @@ export const DashboardOverviewView: React.FC = () => {
           </div>
           <div className="flex items-baseline gap-1.5">
             <span className="text-2xl font-bold text-slate-900">{usage.projectsCount}</span>
-            <span className="text-xs text-slate-400">/ {currentPlan.maxProjects}</span>
+            <span className="text-xs text-slate-400">/ {currentPlan ? currentPlan.maxProjects : 0}</span>
           </div>
           <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
             <div
               className="bg-indigo-600 h-full rounded-full transition-all"
               style={{
-                width: `${Math.min(100, (usage.projectsCount / currentPlan.maxProjects) * 100)}%`,
+                width: currentPlan ? `${Math.min(100, (usage.projectsCount / currentPlan.maxProjects) * 100)}%` : '0%',
               }}
             ></div>
           </div>
@@ -146,13 +189,13 @@ export const DashboardOverviewView: React.FC = () => {
           </div>
           <div className="flex items-baseline gap-1.5">
             <span className="text-2xl font-bold text-slate-900">{usage.domainsCount}</span>
-            <span className="text-xs text-slate-400">/ {currentPlan.maxDomains}</span>
+            <span className="text-xs text-slate-400">/ {currentPlan ? currentPlan.maxDomains : 0}</span>
           </div>
           <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
             <div
               className="bg-emerald-500 h-full rounded-full transition-all"
               style={{
-                width: `${Math.min(100, (usage.domainsCount / currentPlan.maxDomains) * 100)}%`,
+                width: currentPlan ? `${Math.min(100, (usage.domainsCount / currentPlan.maxDomains) * 100)}%` : '0%',
               }}
             ></div>
           </div>
@@ -166,13 +209,13 @@ export const DashboardOverviewView: React.FC = () => {
           </div>
           <div className="flex items-baseline gap-1.5">
             <span className="text-2xl font-bold text-slate-900">{usage.deploymentsCount}</span>
-            <span className="text-xs text-slate-400">/ {currentPlan.maxDeployments}</span>
+            <span className="text-xs text-slate-400">/ {currentPlan ? currentPlan.maxDeployments : 0}</span>
           </div>
           <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
             <div
               className="bg-amber-500 h-full rounded-full transition-all"
               style={{
-                width: `${Math.min(100, (usage.deploymentsCount / currentPlan.maxDeployments) * 100)}%`,
+                width: currentPlan ? `${Math.min(100, (usage.deploymentsCount / currentPlan.maxDeployments) * 100)}%` : '0%',
               }}
             ></div>
           </div>
@@ -233,8 +276,12 @@ export const DashboardOverviewView: React.FC = () => {
                         {p.status}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 font-mono truncate">
-                      https://{p.vivexaSubdomain}
+                    <p className="text-xs text-indigo-600 font-mono truncate">
+                      {p.customDomains && p.customDomains.length > 0
+                        ? `https://${p.customDomains[0]}`
+                        : p.productionUrl
+                        ? p.productionUrl
+                        : 'No custom domain attached'}
                     </p>
                   </div>
 

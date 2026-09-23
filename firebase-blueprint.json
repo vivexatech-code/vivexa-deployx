@@ -24,8 +24,10 @@
         "name": { "type": "string" },
         "description": { "type": "string" },
         "price": { "type": "number" },
+        "currency": { "type": "string" },
         "billingCycle": { "type": "string" },
         "gstRate": { "type": "number" },
+        "razorpayPlanId": { "type": "string" },
         "maxProjects": { "type": "number" },
         "maxDomains": { "type": "number" },
         "maxSubdomains": { "type": "number" },
@@ -47,12 +49,21 @@
         "id": { "type": "string" },
         "userId": { "type": "string" },
         "planId": { "type": "string" },
+        "planName": { "type": "string" },
+        "price": { "type": "number" },
+        "currency": { "type": "string" },
+        "gstRate": { "type": "number" },
+        "gstAmount": { "type": "number" },
+        "totalAmount": { "type": "number" },
         "status": { "type": "string", "enum": ["active", "past_due", "cancelled", "expired", "payment_failed"] },
         "provider": { "type": "string" },
+        "razorpayPlanId": { "type": "string" },
         "razorpaySubscriptionId": { "type": "string" },
+        "razorpayPaymentId": { "type": "string" },
         "currentPeriodStart": { "type": "string" },
         "currentPeriodEnd": { "type": "string" },
         "cancelAtPeriodEnd": { "type": "boolean" },
+        "startedAt": { "type": "string" },
         "createdAt": { "type": "string" },
         "updatedAt": { "type": "string" }
       },
@@ -121,21 +132,6 @@
         "updatedAt": { "type": "string" }
       },
       "required": ["id", "userId", "projectId", "domain", "status"]
-    },
-    "subdomains": {
-      "title": "Subdomain",
-      "description": "Vivexa subdomains registered under vivexatech.in",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "subdomain": { "type": "string" },
-        "fullSubdomain": { "type": "string" },
-        "projectId": { "type": "string" },
-        "userId": { "type": "string" },
-        "status": { "type": "string" },
-        "createdAt": { "type": "string" }
-      },
-      "required": ["id", "subdomain", "fullSubdomain", "projectId", "userId"]
     },
     "payments": {
       "title": "Payment",
@@ -240,10 +236,6 @@
     "/domains/{domainId}": {
       "schema": "domains",
       "description": "Custom domains"
-    },
-    "/subdomains/{subdomainId}": {
-      "schema": "subdomains",
-      "description": "Subdomain registry"
     },
     "/payments/{paymentId}": {
       "schema": "payments",

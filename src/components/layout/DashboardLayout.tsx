@@ -140,21 +140,25 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
           <div className="p-3 rounded-lg bg-white border border-slate-200 shadow-2xs">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Current Plan
+                Subscription
               </span>
-              <span className="text-xs font-extrabold text-indigo-600">
-                {currentPlan?.name || 'Starter'}
+              <span
+                className={`text-xs font-extrabold ${
+                  currentPlan ? 'text-indigo-600' : 'text-amber-700'
+                }`}
+              >
+                {currentPlan ? currentPlan.name : 'No Plan'}
               </span>
             </div>
             <p className="text-xs text-slate-500 mb-2.5">
-              18% GST Invoicing Active
+              {currentPlan ? 'Active Subscription' : 'Payment Required'}
             </p>
             <button
               id="dash-upgrade-plan-btn"
               onClick={() => navigate('/dashboard/billing')}
               className="w-full py-1.5 px-2.5 rounded text-xs font-semibold bg-slate-100 text-slate-800 hover:bg-slate-200 transition-colors flex items-center justify-center gap-1 cursor-pointer"
             >
-              Manage / Upgrade
+              {currentPlan ? 'Manage / Upgrade' : 'Choose a Plan'}
               <ChevronRight className="w-3 h-3" />
             </button>
           </div>

@@ -27,6 +27,9 @@ export const AdminPlansView: React.FC = () => {
     try {
       await planService.updatePlan(plan.id, {
         price: Number(plan.price),
+        gstRate: Number(plan.gstRate || 18),
+        razorpayPlanId: plan.razorpayPlanId || '',
+        active: plan.active !== false,
         maxProjects: Number(plan.maxProjects),
         maxDomains: Number(plan.maxDomains),
         maxSubdomains: Number(plan.maxSubdomains),
@@ -54,46 +57,92 @@ export const AdminPlansView: React.FC = () => {
           Plan & Pricing Configuration
         </h1>
         <p className="text-xs text-slate-500 mt-0.5">
-          Configure tier entitlements, prices in INR (18% GST is dynamically calculated), and quotas.
+          Firebase is the authoritative source of truth for plan prices, Razorpay plan IDs, and quotas.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {plans.map((p) => {
-          const gst = Number((p.price * 0.18).toFixed(2));
+          const rawRate = p.gstRate !== undefined ? Number(p.gstRate) : 18;
+          const rateMultiplier = rawRate > 1 ? rawRate / 100 : rawRate;
+          const gstPercentage = rawRate > 1 ? rawRate : Math.round(rawRate * 100);
+          const gst = Number((p.price * rateMultiplier).toFixed(2));
           const total = (p.price + gst).toFixed(2);
 
           return (
             <div
               key={p.id}
-              className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4"
+              className={`bg-white p-6 rounded-2xl border ${
+                p.active !== false ? 'border-slate-200' : 'border-rose-200 bg-rose-50/20'
+              } shadow-2xs space-y-4`}
             >
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h3 className="font-bold text-base text-slate-900">{p.name}</h3>
-                <label className="flex items-center gap-1.5 text-xs text-slate-600">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(p.highlight)}
-                    onChange={(e) => handleChange(p.id, 'highlight', e.target.checked)}
-                    className="rounded text-indigo-600"
-                  />
-                  Featured
-                </label>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900">{p.name}</h3>
+                  <span className="text-[10px] text-slate-400 font-mono">{p.id}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={p.active !== false}
+                      onChange={(e) => handleChange(p.id, 'active', e.target.checked)}
+                      className="rounded text-indigo-600"
+                    />
+                    Active
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(p.highlight)}
+                      onChange={(e) => handleChange(p.id, 'highlight', e.target.checked)}
+                      className="rounded text-indigo-600"
+                    />
+                    Featured
+                  </label>
+                </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Base Price (INR ₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={p.price}
+                    onChange={(e) => handleChange(p.id, 'price', Number(e.target.value))}
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    GST Rate (%)
+                  </label>
+                  <input
+                    type="number"
+                    value={p.gstRate ?? 18}
+                    onChange={(e) => handleChange(p.id, 'gstRate', Number(e.target.value))}
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-bold"
+                  />
+                </div>
+              </div>
+
+              <p className="text-[11px] text-slate-500">
+                + {gstPercentage}% GST (₹{gst}) = <span className="font-bold text-slate-800">₹{total} total</span>
+              </p>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Base Price (INR ₹)
+                  Razorpay Plan ID
                 </label>
                 <input
-                  type="number"
-                  value={p.price}
-                  onChange={(e) => handleChange(p.id, 'price', Number(e.target.value))}
-                  className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-bold"
+                  type="text"
+                  placeholder="plan_xxxxxxxx"
+                  value={p.razorpayPlanId || ''}
+                  onChange={(e) => handleChange(p.id, 'razorpayPlanId', e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-mono"
                 />
-                <p className="text-[11px] text-slate-500 mt-1">
-                  + 18% GST (₹{gst}) = <span className="font-bold text-slate-800">₹{total} total</span>
-                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-xs">

@@ -70,13 +70,15 @@ export const authService = {
       }
     }
 
-    // Create new profile
+    // Create new profile - strictly NO active plan or subscription upon creation
     const newProfile: UserProfile = {
       uid: user.uid,
       name: user.displayName || user.email?.split('@')[0] || 'Vivexa Developer',
       email: user.email || '',
       photoURL: user.photoURL || '',
       role: isAdminEmail ? 'admin' : 'user',
+      subscriptionStatus: 'none',
+      planId: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

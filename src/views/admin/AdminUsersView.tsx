@@ -80,6 +80,7 @@ export const AdminUsersView: React.FC = () => {
                   <th className="py-3 px-6">User</th>
                   <th className="py-3 px-6">Email</th>
                   <th className="py-3 px-6">Role</th>
+                  <th className="py-3 px-6">Plan Status</th>
                   <th className="py-3 px-6">Joined Date</th>
                   <th className="py-3 px-6 text-right">Actions</th>
                 </tr>
@@ -108,6 +109,17 @@ export const AdminUsersView: React.FC = () => {
                       >
                         {u.role.toUpperCase()}
                       </span>
+                    </td>
+                    <td className="py-3.5 px-6">
+                      {u.subscriptionStatus === 'active' && u.planId ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          {u.planId.toUpperCase()} &bull; PAID
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+                          NO PLAN
+                        </span>
+                      )}
                     </td>
                     <td className="py-3.5 px-6 text-slate-500 whitespace-nowrap">
                       {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}

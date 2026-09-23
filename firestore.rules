@@ -18,11 +18,15 @@ service cloud.firestore {
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
     }
 
-    // Users collection
+    // Users collection - protect role and planId from client-side tampering
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow update: if isAuthenticated() && (
+        isAdmin() || 
+        (request.auth.uid == userId && 
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'planId', 'plan']))
+      );
       allow delete: if isAdmin();
     }
 
@@ -32,12 +36,10 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Subscriptions collection
+    // Subscriptions collection - read only by owner/admin, managed server-side
     match /subscriptions/{subscriptionId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
     // Projects collection
@@ -64,27 +66,16 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
-    // Subdomains collection
-    match /subdomains/{subdomainId} {
-      allow read: if true;
-      allow create: if isAuthenticated();
-      allow update, delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-    }
-
-    // Payments collection
+    // Payments collection - read only by owner/admin, created by server after verification
     match /payments/{paymentId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
-    // Invoices collection
+    // Invoices collection - read only by owner/admin, created by server
     match /invoices/{invoiceId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
     // Notifications collection

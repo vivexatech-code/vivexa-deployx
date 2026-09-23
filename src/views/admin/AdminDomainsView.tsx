@@ -8,7 +8,11 @@ export const AdminDomainsView: React.FC = () => {
 
   useEffect(() => {
     adminService.getAllDomains().then((res) => {
-      setDomains(res);
+      // Filter out legacy subdomain entries
+      const customOnly = (res || []).filter(
+        (d) => d.type !== 'vivexa_subdomain' && !d.domain.endsWith('.vivexatech.in')
+      );
+      setDomains(customOnly);
       setLoading(false);
     });
   }, []);
@@ -17,10 +21,10 @@ export const AdminDomainsView: React.FC = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-          All Platform Domains
+          All Platform Custom Domains
         </h1>
         <p className="text-xs text-slate-500 mt-0.5">
-          All custom domains and subdomains configured across the platform.
+          All custom domains connected to user projects across the platform.
         </p>
       </div>
 
@@ -48,7 +52,7 @@ export const AdminDomainsView: React.FC = () => {
                 {domains.map((dom) => (
                   <tr key={dom.id} className="hover:bg-slate-50/50">
                     <td className="py-3.5 px-6 font-bold text-slate-900">
-                      {dom.domainName}
+                      {dom.domain || dom.domainName}
                     </td>
                     <td className="py-3.5 px-6 font-sans capitalize text-slate-700">
                       {dom.type}

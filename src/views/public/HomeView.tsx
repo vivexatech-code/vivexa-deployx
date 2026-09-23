@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from '../../context/RouterContext';
 import { planService } from '../../services/plan.service';
-import { ROOT_DOMAIN } from '../../config/constants';
 import { Plan } from '../../types';
 import {
   Rocket,
@@ -30,7 +29,7 @@ export const HomeView: React.FC = () => {
     { num: '02', title: 'Select a Plan', desc: 'Choose Starter, Pro, or Business with transparent 18% GST pricing.' },
     { num: '03', title: 'Import GitHub Repo', desc: 'Connect repositories directly with automated branch triggers.' },
     { num: '04', title: 'Deploy to Edge', desc: 'Build and distribute instantly over Vercel global infrastructure.' },
-    { num: '05', title: 'Connect Your Domain', desc: `Get a free *.${ROOT_DOMAIN} subdomain or hook up custom DNS.` },
+    { num: '05', title: 'Attach Custom Domain', desc: 'Hook up your custom DNS (A / CNAME) to go live with automated SSL.' },
   ];
 
   const features = [
@@ -41,8 +40,8 @@ export const HomeView: React.FC = () => {
     },
     {
       icon: Globe,
-      title: 'Free Vivexa Subdomains',
-      desc: `Every project receives a free instant subdomain under *.${ROOT_DOMAIN} with automatic SSL encryption.`,
+      title: 'Instant Deployment Previews',
+      desc: 'Every deployment gets an instantaneous Vercel preview URL so you can inspect builds before directing custom domain traffic.',
     },
     {
       icon: Layers,
@@ -101,10 +100,11 @@ export const HomeView: React.FC = () => {
           </button>
         </div>
 
-        {/* Subdomain teaser pill */}
+        {/* Workflow teaser pill */}
         <div className="mt-12 inline-flex items-center gap-2 text-xs font-mono text-slate-500 bg-slate-100 border border-slate-200 px-4 py-2 rounded-lg">
-          <span>Instant staging URL:</span>
-          <span className="font-bold text-indigo-600">your-project.{ROOT_DOMAIN}</span>
+          <Globe className="w-3.5 h-3.5 text-indigo-600" />
+          <span>Workflow:</span>
+          <span className="font-bold text-slate-800">GitHub &rarr; Vercel Edge &rarr; Custom Domain &rarr; Live</span>
         </div>
       </section>
 
@@ -186,7 +186,10 @@ export const HomeView: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {plans.map((p) => {
-              const gst = Number((p.price * 0.18).toFixed(2));
+              const rawRate = p.gstRate !== undefined ? Number(p.gstRate) : 18;
+              const rateMultiplier = rawRate > 1 ? rawRate / 100 : rawRate;
+              const gstPercentage = rawRate > 1 ? rawRate : Math.round(rawRate * 100);
+              const gst = Number((p.price * rateMultiplier).toFixed(2));
               const total = (p.price + gst).toFixed(2);
 
               return (
@@ -215,7 +218,7 @@ export const HomeView: React.FC = () => {
                         <span className="text-xs text-slate-400">/ month</span>
                       </div>
                       <p className="text-[11px] text-indigo-300 mt-1">
-                        + 18% GST (₹{gst}) = <span className="font-bold text-white">₹{total} total</span>
+                        + {gstPercentage}% GST (₹{gst}) = <span className="font-bold text-white">₹{total} total</span>
                       </p>
                     </div>
 
@@ -227,10 +230,6 @@ export const HomeView: React.FC = () => {
                       <li className="flex items-center gap-2">
                         <Check className="w-4 h-4 text-emerald-400 shrink-0" />
                         <span><strong>{p.maxDomains}</strong> Custom Domains</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                        <span><strong>{p.maxSubdomains}</strong> *.{ROOT_DOMAIN} Subdomains</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Check className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -271,10 +270,10 @@ export const HomeView: React.FC = () => {
         <div className="space-y-6">
           <div className="p-6 rounded-xl bg-slate-50 border border-slate-200">
             <h3 className="text-base font-bold text-slate-900 mb-2">
-              How do the free *.vivexatech.in subdomains work?
+              How does custom domain hosting work?
             </h3>
             <p className="text-sm text-slate-600 leading-relaxed">
-              Every project you create can claim a unique subdomain (such as my-app.{ROOT_DOMAIN}). Subdomain routes are provisioned with automatic wildcard SSL and pointed directly to your Vercel edge build.
+              Once your GitHub repository deployment becomes READY on Vercel edge infrastructure, you can add your custom apex domain or subdomain in the dashboard. We provide the exact DNS records required (CNAME or A record), and upon verification, your site is live with an automated edge SSL certificate.
             </p>
           </div>
 

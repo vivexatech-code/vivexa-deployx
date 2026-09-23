@@ -9,42 +9,62 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+import { billingRouter } from './server/routes/billingRoutes';
+import { hostingRouter } from './server/routes/hostingRoutes';
+import { VercelService } from './server/vercelService';
+import { RazorpayService } from './server/razorpayService';
+import { tokenStore } from './server/tokenStore';
+
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json());
 
-// In-memory / file-backed secure server-side token store
-// Tokens are NEVER sent to the client browser or stored in client-readable documents
-const TOKEN_STORE_PATH = path.join('/tmp', 'vivexa_gh_tokens.json');
-let serverTokenStore: Record<string, { token: string; username: string; avatarUrl: string; connectedAt: string }> = {};
+// Mount Modular API Routers
+app.use('/api/billing', billingRouter);
+app.use('/api/hosting', hostingRouter);
 
-try {
-  if (fs.existsSync(TOKEN_STORE_PATH)) {
-    const data = fs.readFileSync(TOKEN_STORE_PATH, 'utf-8');
-    serverTokenStore = JSON.parse(data);
-  }
-} catch (e) {
-  serverTokenStore = {};
-}
+// Secure server-side token store proxy
+// Tokens are NEVER sent to the client browser or stored in client-readable documents
+const serverTokenStore: Record<string, any> = new Proxy({}, {
+  get(_target, prop: string) {
+    return tokenStore.getToken(prop);
+  },
+  set(_target, prop: string, value: any) {
+    tokenStore.saveToken(prop, value);
+    return true;
+  },
+  deleteProperty(_target, prop: string) {
+    tokenStore.deleteToken(prop);
+    return true;
+  },
+});
 
 function saveTokenStore() {
-  try {
-    fs.writeFileSync(TOKEN_STORE_PATH, JSON.stringify(serverTokenStore), 'utf-8');
-  } catch (e) {
-    console.error('Failed to persist token store:', e);
-  }
+  // handled automatically by tokenStore
 }
 
-// Helper to extract authenticated userId from Authorization header or query
+// Helper to extract authenticated userId from headers, Authorization, or query
 function getRequestUserId(req: express.Request): string | null {
+  const headerUid = req.headers['x-user-id'] as string;
+  if (headerUid) return headerUid.trim();
+
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
-    // In production with Firebase Admin this would be verified via verifyIdToken
-    // For client requests passing user ID or token
     const token = authHeader.substring(7).trim();
     if (token && !token.includes('.')) {
       return token;
+    }
+    // If it's a JWT, parse the payload to extract user_id / sub without throwing
+    if (token && token.split('.').length === 3) {
+      try {
+        const payloadBase64 = token.split('.')[1];
+        const payloadJson = Buffer.from(payloadBase64, 'base64').toString('utf-8');
+        const payload = JSON.parse(payloadJson);
+        if (payload.user_id || payload.sub) {
+          return payload.user_id || payload.sub;
+        }
+      } catch {}
     }
   }
   return (req.query.userId as string) || (req.body?.userId as string) || null;
@@ -58,6 +78,8 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     githubOAuthConfigured: Boolean(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET),
+    vercelConfigured: VercelService.isConfigured(),
+    razorpayConfigured: RazorpayService.isConfigured(),
   });
 });
 
@@ -686,7 +708,10 @@ async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: process.env.DISABLE_HMR === 'true' ? false : undefined,
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);
@@ -700,6 +725,10 @@ async function startServer() {
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Vivexa server running on port ${PORT}`);
+    // Run legacy subdomain database cleanup in background
+    import('./server/migration')
+      .then((m) => m.purgeLegacySubdomains())
+      .catch((err) => console.warn('[Migration notice]', err?.message || err));
   });
 }
 

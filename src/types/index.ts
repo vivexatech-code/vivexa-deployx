@@ -12,6 +12,8 @@ export interface UserProfile {
   photoURL?: string;
   role: UserRole;
   gstin?: string;
+  planId?: string | null;
+  subscriptionStatus?: SubscriptionStatus;
   githubConnected?: boolean;
   githubUsername?: string;
   createdAt: string;
@@ -22,9 +24,11 @@ export interface Plan {
   id: string;
   name: string;
   description: string;
-  price: number; // Base price in INR
+  price: number; // Base price in INR (source of truth: Firebase plans collection)
+  currency?: string; // Default 'INR'
   billingCycle: 'monthly' | 'yearly';
-  gstRate: number; // 0.18
+  gstRate: number; // e.g. 18 or 0.18
+  razorpayPlanId?: string; // Razorpay Plan ID for mapping
   maxProjects: number;
   maxDomains: number;
   maxSubdomains: number;
@@ -40,6 +44,8 @@ export interface Plan {
 }
 
 export type SubscriptionStatus =
+  | 'none'
+  | 'inactive'
   | 'active'
   | 'past_due'
   | 'cancelled'
@@ -51,12 +57,25 @@ export interface Subscription {
   userId: string;
   planId: string;
   planName?: string;
+  price?: number; // Snapshot of purchased base price
+  currency?: string;
+  gstRate?: number; // Snapshot of GST rate
+  gstAmount?: number; // Snapshot of GST amount
+  totalAmount?: number; // Snapshot of total amount paid
   status: SubscriptionStatus;
+  paymentStatus?: 'paid' | 'unpaid' | 'pending' | 'failed';
   provider: 'razorpay';
+  razorpayPlanId?: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
   razorpaySubscriptionId?: string;
-  currentPeriodStart: string;
-  currentPeriodEnd: string;
+  amount?: number;
+  startedAt?: string;
+  currentPeriodStart?: string;
+  currentPeriodEnd?: string;
   cancelAtPeriodEnd: boolean;
+  needsReview?: boolean;
+  reviewReason?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -77,15 +96,20 @@ export interface Project {
   repositoryOwner: string;
   repositoryUrl: string;
   branch: string;
+  rootDirectory?: string;
   framework: string;
   buildCommand?: string;
   outputDirectory?: string;
   installCommand?: string;
   envVars?: Record<string, string>;
   vercelProjectId?: string;
+  vercelProjectName?: string;
   productionDeploymentId?: string;
   productionUrl?: string;
-  vivexaSubdomain: string;
+  customDomains?: string[];
+  subdomain?: string;
+  vivexaSubdomain?: string;
+  subdomainStatus?: DomainStatus;
   status: DeploymentStatus;
   createdAt: string;
   updatedAt: string;
@@ -122,12 +146,16 @@ export interface DomainRecord {
   projectName?: string;
   domain: string;
   domainName?: string;
-  type?: string;
+  type?: 'custom' | 'custom_domain' | string;
+  isPrimary?: boolean;
   status: DomainStatus;
-  dnsRecordType: 'CNAME' | 'A';
-  dnsHost: string;
-  dnsValue: string;
-  dnsRecords?: { type: string; host: string; value: string };
+  dnsRecordType?: 'CNAME' | 'A';
+  dnsHost?: string;
+  dnsValue?: string;
+  dnsRecords?: Array<{ type: string; host: string; value: string; status?: string; reason?: string }>;
+  vercelProjectId?: string;
+  verified?: boolean;
+  verification?: Array<{ type: string; domain: string; value: string; reason?: string }>;
   verifiedAt?: string;
   createdAt: string;
   updatedAt: string;

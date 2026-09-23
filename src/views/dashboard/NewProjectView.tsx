@@ -3,8 +3,8 @@ import { useRouter } from '../../context/RouterContext';
 import { useAuth } from '../../context/AuthContext';
 import { githubService } from '../../services/github.service';
 import { projectService } from '../../services/project.service';
-import { domainService } from '../../services/domain.service';
-import { ROOT_DOMAIN, FRAMEWORK_PRESETS } from '../../config/constants';
+import { planService } from '../../services/plan.service';
+import { FRAMEWORK_PRESETS } from '../../config/constants';
 import { GitHubRepo, GitHubBranch } from '../../types';
 import {
   GitBranch,
@@ -22,6 +22,10 @@ import {
   LogOut,
   ExternalLink,
   ShieldCheck,
+  FolderTree,
+  CheckCircle2,
+  AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 
 export const NewProjectView: React.FC = () => {
@@ -49,19 +53,33 @@ export const NewProjectView: React.FC = () => {
 
   // Project Settings
   const [projectName, setProjectName] = useState('');
-  const [subdomain, setSubdomain] = useState('');
+  const [rootDirectory, setRootDirectory] = useState('');
+  const [candidateRootDirs, setCandidateRootDirs] = useState<string[]>([]);
   const [framework, setFramework] = useState('vite');
   const [buildCommand, setBuildCommand] = useState('npm run build');
   const [outputDirectory, setOutputDirectory] = useState('dist');
+  const [installCommand, setInstallCommand] = useState('npm install');
   const [envVars, setEnvVars] = useState<Array<{ key: string; value: string }>>([]);
+
+  const [inspectingRepo, setInspectingRepo] = useState(false);
+  const [inspectionNotice, setInspectionNotice] = useState<{
+    type: 'success' | 'warning' | 'info';
+    text: string;
+    details?: string;
+  } | null>(null);
 
   const [deploying, setDeploying] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
+  const [hasActiveSub, setHasActiveSub] = useState<boolean | null>(null);
 
-  // Load existing GitHub connection
+  // Load existing GitHub connection and check plan entitlement
   useEffect(() => {
     if (user) {
+      planService.getUserUsage(user.uid).then((usage) => {
+        setHasActiveSub(usage.hasActiveSubscription);
+      });
+
       githubService.getGitHubConnection(user.uid).then((conn) => {
         if (conn && (conn.githubUsername || (conn as any).username)) {
           setHasGitHub(true);
@@ -131,30 +149,107 @@ export const NewProjectView: React.FC = () => {
     }
   };
 
+  const runInspection = async (
+    owner: string,
+    repoName: string,
+    branch: string,
+    rootDir: string
+  ) => {
+    if (!user) return;
+    setInspectingRepo(true);
+    setInspectionNotice(null);
+    try {
+      const result = await githubService.inspectRepository(
+        user.uid,
+        owner,
+        repoName,
+        branch,
+        rootDir
+      );
+
+      if (result.success) {
+        setCandidateRootDirs(result.candidateRootDirectories || []);
+        if (result.detectedFramework) {
+          setFramework(result.detectedFramework);
+        } else if (result.isStatic) {
+          setFramework('static');
+        }
+
+        setBuildCommand(result.buildCommand !== null ? result.buildCommand : '');
+        setOutputDirectory(result.outputDirectory !== null ? result.outputDirectory : '');
+        if (result.installCommand) {
+          setInstallCommand(result.installCommand);
+        }
+
+        if (result.isStatic) {
+          setInspectionNotice({
+            type: 'info',
+            text: 'Static site detected',
+            details: 'Repository contains HTML/CSS/JS without a build step. Deploys directly to global CDN.',
+          });
+        } else {
+          setInspectionNotice({
+            type: 'success',
+            text: `Detected ${result.frameworkName} (${result.packageManager})`,
+            details: result.hasPackageJson
+              ? `Verified package.json in ${rootDir || 'repository root'}`
+              : undefined,
+          });
+        }
+      } else if (result.error) {
+        setInspectionNotice({
+          type: 'warning',
+          text: result.error,
+          details: 'Please check the directory name or select one of the detected folders below.',
+        });
+      }
+    } catch (e: any) {
+      console.warn('Repository inspection notice:', e);
+    } finally {
+      setInspectingRepo(false);
+    }
+  };
+
   const handleSelectRepo = async (repo: GitHubRepo) => {
     setSelectedRepo(repo);
     setProjectName(repo.name);
-    // Suggest clean subdomain from repo name
-    const cleanSub = repo.name.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 24);
-    setSubdomain(cleanSub);
+    setRootDirectory('');
+    setCandidateRootDirs([]);
+    setInspectionNotice(null);
 
     if (user) {
       setLoadingBranches(true);
+      const branchToUse = repo.default_branch || 'main';
+      setSelectedBranch(branchToUse);
+
       try {
         const bList = await githubService.getBranches(user.uid, repo.owner.login, repo.name);
         setBranches(bList);
-        setSelectedBranch(repo.default_branch || bList[0]?.name || 'main');
-
-        const detectedFw = await githubService.detectFramework(user.uid, repo.owner.login, repo.name);
-        setFramework(detectedFw);
-        const preset = githubService.getPresetDefaults(detectedFw);
-        setBuildCommand(preset.buildCommand);
-        setOutputDirectory(preset.outputDirectory);
+        if (bList.length > 0 && !bList.some((b) => b.name === branchToUse)) {
+          setSelectedBranch(bList[0].name);
+        }
       } catch (err) {
-        console.warn('Branch or framework fetch note:', err);
+        console.warn('Branch fetch notice:', err);
       } finally {
         setLoadingBranches(false);
       }
+
+      // Automatically inspect the repository source, framework, and package.json
+      await runInspection(repo.owner.login, repo.name, branchToUse, '');
+    }
+  };
+
+  const handleBranchChange = async (newBranch: string) => {
+    setSelectedBranch(newBranch);
+    if (selectedRepo) {
+      await runInspection(selectedRepo.owner.login, selectedRepo.name, newBranch, rootDirectory);
+    }
+  };
+
+  const handleRootDirChange = async (newRootDir: string) => {
+    setRootDirectory(newRootDir);
+    if (selectedRepo) {
+      await runInspection(selectedRepo.owner.login, selectedRepo.name, selectedBranch, newRootDir);
     }
   };
 
@@ -182,18 +277,23 @@ export const NewProjectView: React.FC = () => {
   const handleDeploy = async () => {
     if (!user || !selectedRepo) return;
 
-    setErrorMsg(null);
-
-    // Validate subdomain
-    const subCheck = domainService.validateSubdomain(subdomain);
-    if (!subCheck.valid) {
-      setErrorMsg(subCheck.error || 'Invalid subdomain.');
+    if (!projectName.trim()) {
+      setErrorMsg('Please enter a valid project name.');
       return;
     }
 
+    setErrorMsg(null);
     setDeploying(true);
 
     try {
+      // Check entitlement before initiating deployment
+      const entitlement = await planService.canCreateProject(user.uid);
+      if (!entitlement.allowed) {
+        setErrorMsg(entitlement.reason || 'Active paid subscription required to deploy projects.');
+        setDeploying(false);
+        return;
+      }
+
       const envRecord: Record<string, string> = {};
       envVars.forEach((v) => {
         if (v.key.trim()) envRecord[v.key.trim()] = v.value;
@@ -202,15 +302,16 @@ export const NewProjectView: React.FC = () => {
       const { project } = await projectService.createProject({
         userId: user.uid,
         name: projectName.trim(),
-        subdomain: subCheck.normalized,
         repositoryId: String(selectedRepo.id),
         repositoryName: selectedRepo.name,
         repositoryOwner: selectedRepo.owner.login,
         repositoryUrl: selectedRepo.html_url,
+        rootDirectory: rootDirectory.trim(),
         branch: selectedBranch,
-        framework,
-        buildCommand,
-        outputDirectory,
+        framework: framework === 'static' ? '' : framework,
+        buildCommand: buildCommand.trim(),
+        outputDirectory: outputDirectory.trim(),
+        installCommand: installCommand.trim(),
         envVars: envRecord,
       });
 
@@ -249,10 +350,39 @@ export const NewProjectView: React.FC = () => {
             Import Git Repository
           </h1>
           <p className="text-xs text-slate-500">
-            Deploy full-stack applications with automated CI/CD and free Vivexa HTTPS subdomains.
+            Deploy full-stack applications with automated CI/CD and custom domain edge routing.
           </p>
         </div>
       </div>
+
+      {/* Subscription Required Banner */}
+      {hasActiveSub === false && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="p-2.5 rounded-xl bg-amber-500/15 text-amber-700">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900">Paid Plan Required</h3>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-200">
+                  Payment Required
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Hosting and project deployments require an active paid subscription plan. Activate a plan to deploy.
+              </p>
+            </div>
+          </div>
+          <button
+            id="newproject-activate-plan-banner-btn"
+            onClick={() => navigate('/dashboard/billing')}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-sm whitespace-nowrap cursor-pointer"
+          >
+            Activate a Plan
+          </button>
+        </div>
+      )}
 
       {successNotice && (
         <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2.5">
@@ -519,7 +649,7 @@ export const NewProjectView: React.FC = () => {
                 id="select-project-branch"
                 value={selectedBranch}
                 disabled={loadingBranches}
-                onChange={(e) => setSelectedBranch(e.target.value)}
+                onChange={(e) => handleBranchChange(e.target.value)}
                 className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-indigo-600 focus:outline-none font-mono"
               >
                 {branches.length > 0 ? (
@@ -537,30 +667,105 @@ export const NewProjectView: React.FC = () => {
             </div>
           </div>
 
-          {/* Subdomain configuration */}
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-            <label className="block text-xs font-bold text-slate-900">
-              Free Vivexa Subdomain
-            </label>
-            <div className="flex items-center">
-              <input
-                id="input-subdomain"
-                type="text"
-                value={subdomain}
-                onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                placeholder="my-awesome-site"
-                className="w-full px-3 py-2 rounded-l-lg border border-slate-300 bg-white text-xs font-mono text-slate-900 focus:ring-2 focus:ring-indigo-600 focus:outline-none"
-              />
-              <span className="px-3 py-2 bg-slate-200 border-y border-r border-slate-300 rounded-r-lg text-xs font-mono font-bold text-slate-700 select-none">
-                .{ROOT_DOMAIN}
-              </span>
+          {/* Root Directory (Monorepo Support) */}
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                <FolderTree className="w-3.5 h-3.5 text-indigo-600" />
+                Root Directory
+                <span className="text-[11px] font-normal text-slate-500">(Monorepo support)</span>
+              </label>
+              {inspectingRepo && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-indigo-600">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Inspecting repository...
+                </span>
+              )}
             </div>
-            <p className="text-[11px] text-slate-500">
-              Your application will be live over SSL at{' '}
-              <span className="font-mono font-semibold text-indigo-600">
-                https://{subdomain || '...'}.{ROOT_DOMAIN}
-              </span>
-            </p>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono text-slate-400">./</span>
+              <input
+                id="input-root-directory"
+                type="text"
+                value={rootDirectory}
+                placeholder="e.g. frontend or apps/web (leave blank for root)"
+                onChange={(e) => setRootDirectory(e.target.value)}
+                onBlur={(e) => handleRootDirChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleRootDirChange((e.target as HTMLInputElement).value);
+                  }
+                }}
+                className="flex-1 px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs font-mono text-slate-900 focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => handleRootDirChange(rootDirectory)}
+                className="px-3 py-2 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 cursor-pointer"
+              >
+                Scan
+              </button>
+            </div>
+
+            {candidateRootDirs.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                <span className="text-[11px] text-slate-500">Detected project folders:</span>
+                {candidateRootDirs.map((dir) => (
+                  <button
+                    key={dir}
+                    type="button"
+                    onClick={() => handleRootDirChange(dir)}
+                    className={`px-2 py-0.5 rounded text-[11px] font-mono border transition-colors cursor-pointer ${
+                      rootDirectory === dir
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-white text-slate-700 border-slate-300 hover:border-indigo-400'
+                    }`}
+                  >
+                    {dir}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Inspection result banner */}
+            {inspectionNotice && (
+              <div
+                className={`p-2.5 rounded-lg border text-xs flex items-start gap-2 ${
+                  inspectionNotice.type === 'success'
+                    ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900'
+                    : inspectionNotice.type === 'warning'
+                    ? 'bg-amber-50/80 border-amber-200 text-amber-900'
+                    : 'bg-indigo-50/80 border-indigo-200 text-indigo-900'
+                }`}
+              >
+                {inspectionNotice.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                ) : inspectionNotice.type === 'warning' ? (
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                ) : (
+                  <Check className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                )}
+                <div>
+                  <p className="font-bold">{inspectionNotice.text}</p>
+                  {inspectionNotice.details && (
+                    <p className="text-[11px] opacity-80 mt-0.5">{inspectionNotice.details}</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Custom Domain Workflow notice */}
+          <div className="p-4 rounded-xl bg-indigo-50/70 border border-indigo-100 flex items-start gap-3">
+            <Globe className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+            <div className="text-xs space-y-1">
+              <p className="font-bold text-slate-900">Custom Domain Workflow</p>
+              <p className="text-slate-600 leading-relaxed">
+                Your project will be deployed to Vercel's global edge network with an initial deployment preview URL. Once deployment is <strong>READY</strong>, you can connect your own custom domain (e.g. <span className="font-mono font-medium text-indigo-700">yourbrand.com</span> or <span className="font-mono font-medium text-indigo-700">app.yourbrand.com</span>) in your project settings with instant DNS verification.
+              </p>
+            </div>
           </div>
 
           {/* Framework preset */}
@@ -587,7 +792,7 @@ export const NewProjectView: React.FC = () => {
           </div>
 
           {/* Build settings */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Build Command
@@ -596,7 +801,7 @@ export const NewProjectView: React.FC = () => {
                 type="text"
                 value={buildCommand}
                 onChange={(e) => setBuildCommand(e.target.value)}
-                placeholder="npm run build"
+                placeholder="npm run build (or leave empty)"
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono text-xs focus:ring-2 focus:ring-indigo-600 focus:outline-none"
               />
             </div>
@@ -608,7 +813,19 @@ export const NewProjectView: React.FC = () => {
                 type="text"
                 value={outputDirectory}
                 onChange={(e) => setOutputDirectory(e.target.value)}
-                placeholder="dist"
+                placeholder="dist (or leave empty for static)"
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono text-xs focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Install Command
+              </label>
+              <input
+                type="text"
+                value={installCommand}
+                onChange={(e) => setInstallCommand(e.target.value)}
+                placeholder="npm install"
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono text-xs focus:ring-2 focus:ring-indigo-600 focus:outline-none"
               />
             </div>

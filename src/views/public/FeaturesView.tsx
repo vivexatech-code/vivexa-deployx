@@ -1,6 +1,5 @@
 import React from 'react';
 import { useRouter } from '../../context/RouterContext';
-import { ROOT_DOMAIN } from '../../config/constants';
 import {
   GitBranch,
   Globe,
@@ -68,12 +67,12 @@ export const FeaturesView: React.FC = () => {
               <p className="text-slate-500">&gt; Webhook received by Vivexa Engine</p>
               <p className="text-slate-400">&gt; Framework detected: Next.js (App Router)</p>
               <p className="text-indigo-400">&gt; Building static routes & edge lambdas...</p>
-              <p className="text-emerald-400 font-bold">&gt; Deployment READY: https://portfolio.{ROOT_DOMAIN}</p>
+              <p className="text-emerald-400 font-bold">&gt; Deployment READY: https://portfolio-live.vercel.app</p>
             </div>
           </div>
         </div>
 
-        {/* Section 2: Subdomains & Custom Domains */}
+        {/* Section 2: Custom Domains */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center lg:flex-row-reverse">
           <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
             <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4">
@@ -81,16 +80,16 @@ export const FeaturesView: React.FC = () => {
             </h3>
             <div className="space-y-3 font-mono text-xs">
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                <p className="text-slate-500 text-[11px]">Vivexa Subdomain (Free)</p>
-                <p className="font-bold text-indigo-600">*.{ROOT_DOMAIN} &rarr; Wildcard Edge DNS</p>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                 <p className="text-slate-500 text-[11px]">Apex Domain (@)</p>
                 <p className="font-bold text-slate-800">Type: A &bull; Value: 76.76.21.21</p>
               </div>
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                <p className="text-slate-500 text-[11px]">Subdomain / CNAME</p>
-                <p className="font-bold text-slate-800">Type: CNAME &bull; Value: cname.vercel-dns.com</p>
+                <p className="text-slate-500 text-[11px]">Custom Subdomain (e.g. app)</p>
+                <p className="font-bold text-indigo-600">Type: CNAME &bull; Value: cname.vercel-dns.com</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <p className="text-slate-500 text-[11px]">Apex Domain & Subdomain Routing</p>
+                <p className="font-bold text-slate-800">A / CNAME &bull; Global Anycast Edge</p>
               </div>
             </div>
           </div>
@@ -100,15 +99,15 @@ export const FeaturesView: React.FC = () => {
               <Globe className="w-6 h-6" />
             </div>
             <h2 className="text-2xl font-bold text-slate-900 mb-3">
-              Instant Free Subdomains & Custom Domains
+              Branded Custom Domains & Edge Routing
             </h2>
             <p className="text-sm text-slate-600 leading-relaxed mb-4">
-              Every project instantly receives a free subdomain under <span className="font-semibold text-slate-900">*.{ROOT_DOMAIN}</span>. When you are ready for your own brand, attach custom domains with our automated DNS verification engine.
+              Deploy your project to Vercel and attach your own custom domains with automated DNS verification and edge SSL certificate provisioning.
             </p>
             <ul className="space-y-2 text-xs text-slate-700">
               <li className="flex items-center gap-2 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
-                Reserved name protection prevents phishing and system spoofing
+                Support for both apex domains (example.com) and subdomains (app.example.com)
               </li>
               <li className="flex items-center gap-2 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
@@ -116,7 +115,7 @@ export const FeaturesView: React.FC = () => {
               </li>
               <li className="flex items-center gap-2 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
-                Real-time DNS check button with diagnostic feedback
+                Real-time DNS check button with diagnostic feedback and propagation checks
               </li>
             </ul>
           </div>

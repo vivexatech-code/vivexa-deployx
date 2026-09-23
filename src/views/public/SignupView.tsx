@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from '../../context/RouterContext';
 import { useAuth } from '../../context/AuthContext';
 import { Cloud, ArrowRight, AlertCircle, ShieldCheck } from 'lucide-react';
@@ -13,8 +13,13 @@ export const SignupView: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
+
   if (user) {
-    navigate('/dashboard');
     return null;
   }
 
