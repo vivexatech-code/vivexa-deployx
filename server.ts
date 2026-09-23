@@ -22,6 +22,13 @@ app.use(express.json());
 
 // Mount Modular API Routers
 app.use('/api/billing', billingRouter);
+app.use('/billing/api', billingRouter);
+app.use('/billing', (req, res, next) => {
+  if (req.headers.accept?.includes('application/json')) {
+    return billingRouter(req, res, next);
+  }
+  next();
+});
 app.use('/api/hosting', hostingRouter);
 
 // Secure server-side token store proxy
@@ -715,6 +722,29 @@ async function startServer() {
       appType: 'spa',
     });
     app.use(vite.middlewares);
+
+    // Dev SPA fallback: ensure deep links like /billing and /dashboard/billing always return transformed index.html
+    app.get('*', async (req, res, next) => {
+      // Pass through API endpoints or Vite internal assets
+      if (
+        req.originalUrl.startsWith('/api') ||
+        req.originalUrl.startsWith('/@') ||
+        req.originalUrl.startsWith('/src') ||
+        req.originalUrl.startsWith('/node_modules') ||
+        req.originalUrl.includes('.')
+      ) {
+        return next();
+      }
+      try {
+        const url = req.originalUrl;
+        const indexPath = path.resolve(process.cwd(), 'index.html');
+        let template = fs.readFileSync(indexPath, 'utf-8');
+        template = await vite.transformIndexHtml(url, template);
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+      } catch (e) {
+        next(e);
+      }
+    });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));

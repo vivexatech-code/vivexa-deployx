@@ -61,8 +61,8 @@ const AppRoutes: React.FC = () => {
     );
   }
 
-  // Protected Route Guard for Dashboard
-  if (path.startsWith('/dashboard') && !user) {
+  // Protected Route Guard for Dashboard & Billing
+  if ((path.startsWith('/dashboard') || path === '/billing' || path === '/subscription') && !user) {
     return (
       <div className="min-h-screen flex flex-col bg-slate-50">
         <Navbar />
@@ -93,7 +93,7 @@ const AppRoutes: React.FC = () => {
   }
 
   // --- USER DASHBOARD ROUTES ---
-  if (path.startsWith('/dashboard')) {
+  if (path.startsWith('/dashboard') || path === '/billing' || path === '/subscription') {
     return (
       <DashboardLayout>
         {path === '/dashboard' && <DashboardOverviewView />}
@@ -102,7 +102,7 @@ const AppRoutes: React.FC = () => {
         {Boolean(params.projectId) && <ProjectDetailView />}
         {path === '/dashboard/domains' && <DomainsView />}
         {path === '/dashboard/deployments' && <DeploymentsView />}
-        {path === '/dashboard/billing' && <BillingView />}
+        {(path === '/dashboard/billing' || path === '/billing' || path === '/subscription') && <BillingView />}
         {path === '/dashboard/settings' && <SettingsView />}
       </DashboardLayout>
     );

@@ -99,7 +99,8 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
             const isActive =
               item.path === '/dashboard'
                 ? path === '/dashboard'
-                : path.startsWith(item.path);
+                : path.startsWith(item.path) ||
+                  (item.path === '/dashboard/billing' && (path === '/billing' || path === '/subscription'));
 
             return (
               <button

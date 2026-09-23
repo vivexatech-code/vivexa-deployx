@@ -11,6 +11,17 @@ import {
 export const billingRouter = Router();
 
 /**
+ * Service status
+ */
+billingRouter.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'billing',
+    endpoints: ['/config', '/plans', '/create-order', '/verify-payment', '/cancel-subscription'],
+  });
+});
+
+/**
  * Public/Client Razorpay configuration
  */
 billingRouter.get('/config', (req, res) => {
