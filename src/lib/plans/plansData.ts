@@ -1,4 +1,4 @@
-import { getAdminServices } from '../firebase/admin';
+import { getAdminServices, isAdminConfigured } from '../firebase/admin';
 
 export interface FirebasePlan {
   id: string;
@@ -87,6 +87,11 @@ function getAliasCandidates(planId: string): string[] {
  * Authoritatively retrieves a plan directly from Firestore `plans` collection.
  */
 export async function getPlanFromFirebase(planId: string): Promise<FirebasePlan | null> {
+  if (!isAdminConfigured()) {
+    throw new Error(
+      'Firebase Admin credentials are not configured. Set FIREBASE_ADMIN_CLIENT_EMAIL and FIREBASE_ADMIN_PRIVATE_KEY in .env.local.'
+    );
+  }
   const { adminDb } = getAdminServices();
   const candidates = getAliasCandidates(planId);
 
@@ -126,6 +131,11 @@ export async function getPlanFromFirebase(planId: string): Promise<FirebasePlan 
  * Authoritatively retrieves all active plans directly from Firestore `plans` collection.
  */
 export async function getAllPlansFromFirebase(): Promise<FirebasePlan[]> {
+  if (!isAdminConfigured()) {
+    throw new Error(
+      'Firebase Admin credentials are not configured. Set FIREBASE_ADMIN_CLIENT_EMAIL and FIREBASE_ADMIN_PRIVATE_KEY in .env.local.'
+    );
+  }
   const { adminDb } = getAdminServices();
   const snap = await adminDb.collection('plans').get();
   const plans: FirebasePlan[] = [];

@@ -1,6 +1,6 @@
-# Vivexa Hosting Platform
+# Vivexa DeployX Platform
 
-Vivexa Hosting is a production-grade cloud platform for deploying full-stack web applications with automated GitHub CI/CD, Vercel infrastructure integration, custom domain management with SSL, and GST-compliant subscription billing via Razorpay.
+Vivexa DeployX is a production-grade cloud platform for deploying full-stack web applications with automated GitHub CI/CD, Vercel infrastructure integration, custom domain management with SSL, and GST-compliant subscription billing via Razorpay.
 
 ---
 
@@ -13,7 +13,7 @@ Vivexa uses GitHub's official OAuth authorization flow (like Vercel, Netlify, an
 1. Navigate to your GitHub Developer Settings:
    - [github.com/settings/developers](https://github.com/settings/developers) &rarr; **OAuth Apps** &rarr; **New OAuth App**
 2. Fill in the application registration details:
-   - **Application Name**: `Vivexa Hosting`
+   - **Application Name**: `Vivexa DeployX`
    - **Homepage URL**: `https://ais-dev-qypshwrdxrmbx4nzaztbxn-567282406906.asia-southeast1.run.app` (or your production domain `https://vivexatech.in`)
    - **Application Description**: `Cloud hosting and automated deployment platform by Vivexa`
    - **Authorization Callback URL**:
@@ -54,7 +54,7 @@ Vivexa requests the following standard OAuth scopes:
 1. Log into Vivexa as any user.
 2. Navigate to **Dashboard &rarr; Projects &rarr; Import Git Repository**.
 3. Click **Connect GitHub**.
-4. GitHub will display the official **"Authorize Vivexa Hosting"** screen.
+4. GitHub will display the official **"Authorize Vivexa DeployX"** screen.
 5. Once approved, the popup safely closes and your personal repositories (public and private) automatically appear in the repository selector.
 6. Select a repository, choose the deployment branch, review framework settings, and click **Deploy Project**.
 

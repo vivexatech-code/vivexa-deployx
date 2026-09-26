@@ -1,4 +1,5 @@
 node_modules/
+.next/
 build/
 dist/
 coverage/
@@ -6,3 +7,7 @@ coverage/
 *.log
 .env*
 !.env.example
+.data/
+tsconfig.tsbuildinfo
+AGENTS.md
+CLAUDE.md

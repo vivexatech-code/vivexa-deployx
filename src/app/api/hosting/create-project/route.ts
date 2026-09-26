@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     if ((!finalRepoOwner || !finalRepoName) && repositoryUrl) {
       try {
         const parsedUrl = new URL(repositoryUrl);
-        const parts = parsedUrl.pathname.replace(/^\/|\.git$/g, '').split('/');
+        const parts = parsedUrl.pathname.replace(/\.git$/, '').replace(/^\//, '').split('/');
         if (parts.length >= 2) {
           finalRepoOwner = parts[0];
           finalRepoName = parts[1];
@@ -61,57 +61,65 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     const projectId = `proj_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const cleanRootDir = (rootDirectory || '').replace(/^\/+|\/+$/g, '').trim();
+    const isStatic = framework === 'static';
+    const resolvedFramework = isStatic ? 'static' : (framework || 'vite');
+
+    if (!VercelService.isConfigured()) {
+      return NextResponse.json(
+        { error: 'VERCEL_TOKEN is not configured on the server.' },
+        { status: 503 }
+      );
+    }
 
     let vercelProjectId = '';
     let vercelProjectName = '';
     let initialDeployment: any = null;
 
-    if (VercelService.isConfigured()) {
-      try {
-        const safeSlug =
-          name
-            .toLowerCase()
-            .replace(/[^a-z0-9-]/g, '-')
-            .replace(/^-+|-+$/g, '')
-            .slice(0, 40) || 'project';
-        const uniqueVercelName = `${safeSlug}-${user.uid.slice(0, 6)}`;
+    const safeSlug =
+      name
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 40) || 'project';
+    const uniqueVercelName = `${safeSlug}-${user.uid.slice(0, 6)}`;
 
-        const vercelProject = await VercelService.createProject({
-          name: uniqueVercelName,
-          framework: framework || null,
-          buildCommand: buildCommand || undefined,
-          outputDirectory: outputDirectory || undefined,
-          installCommand: installCommand || undefined,
-          rootDirectory: cleanRootDir || undefined,
-          environmentVariables: envVars || undefined,
-        });
+    try {
+      const vercelProject = await VercelService.createProject({
+        name: uniqueVercelName,
+        framework: isStatic ? null : resolvedFramework,
+        buildCommand: isStatic ? null : buildCommand || undefined,
+        outputDirectory: isStatic ? null : outputDirectory || undefined,
+        installCommand: isStatic ? null : installCommand || undefined,
+        rootDirectory: cleanRootDir || undefined,
+        environmentVariables: envVars || undefined,
+      });
 
-        vercelProjectId = vercelProject.id;
-        vercelProjectName = vercelProject.name;
+      vercelProjectId = vercelProject.id;
+      vercelProjectName = vercelProject.name;
 
-        try {
-          initialDeployment = await VercelService.createDeployment({
-            projectId: vercelProjectId,
-            projectName: name,
-            branch: gitBranch || 'main',
-            repoName: finalRepoName,
-            repoOwner: finalRepoOwner,
-            rootDirectory: cleanRootDir || undefined,
-            framework: framework || null,
-            buildCommand: buildCommand || null,
-            outputDirectory: outputDirectory || null,
-            installCommand: installCommand || null,
-            userId: user.uid,
-          });
-        } catch (deployErr: any) {
-          console.warn('Initial deployment warning:', deployErr.message);
-        }
-      } catch (vercelErr: any) {
-        console.error('Vercel provisioning error:', vercelErr);
-      }
+      initialDeployment = await VercelService.createDeployment({
+        projectId: vercelProjectId,
+        projectName: name,
+        branch: gitBranch || 'main',
+        repoName: finalRepoName,
+        repoOwner: finalRepoOwner,
+        rootDirectory: cleanRootDir || undefined,
+        framework: isStatic ? null : resolvedFramework,
+        buildCommand: isStatic ? null : buildCommand || null,
+        outputDirectory: isStatic ? null : outputDirectory || null,
+        installCommand: isStatic ? null : installCommand || null,
+        userId: user.uid,
+      });
+    } catch (vercelErr: any) {
+      console.error('Vercel provisioning error:', vercelErr);
+      return NextResponse.json(
+        { error: vercelErr.message || 'Could not deploy the project to Vercel.' },
+        { status: 502 }
+      );
     }
 
     const productionUrl = initialDeployment?.url || '';
+    const deploymentReady = initialDeployment?.readyState === 'READY';
 
     const projectRecord = {
       id: projectId,
@@ -123,12 +131,12 @@ export async function POST(req: NextRequest) {
       repositoryOwner: finalRepoOwner,
       repositoryUrl: repositoryUrl || '',
       rootDirectory: cleanRootDir,
-      framework: framework || 'vite',
-      buildCommand: buildCommand || '',
-      outputDirectory: outputDirectory || 'dist',
-      installCommand: installCommand || '',
+      framework: resolvedFramework,
+      buildCommand: isStatic ? '' : buildCommand || '',
+      outputDirectory: isStatic ? '' : outputDirectory || 'dist',
+      installCommand: isStatic ? '' : installCommand || '',
       envVars: envVars || {},
-      status: initialDeployment?.readyState === 'READY' ? 'READY' : 'BUILDING',
+      status: deploymentReady ? 'READY' : 'BUILDING',
       productionUrl,
       vercelProjectId: vercelProjectId || '',
       vercelProjectName: vercelProjectName || '',
@@ -146,7 +154,7 @@ export async function POST(req: NextRequest) {
       userId: user.uid,
       vercelDeploymentId: initialDeployment?.id || '',
       url: productionUrl,
-      status: initialDeployment?.readyState === 'READY' ? 'READY' : 'BUILDING',
+      status: deploymentReady ? 'READY' : 'BUILDING',
       branch: gitBranch || 'main',
       commitMessage: 'Initial project setup and deployment',
       createdAt: now.toISOString(),
@@ -158,8 +166,10 @@ export async function POST(req: NextRequest) {
     await adminDb.collection('notifications').doc(`notif_${Date.now()}`).set({
       id: `notif_${Date.now()}`,
       userId: user.uid,
-      title: 'Project Deployed to Vercel! 🚀',
-      message: `${name} has been built and deployed. Connect your custom domain to take it live.`,
+      title: deploymentReady ? 'Project deployed' : 'Deployment started',
+      message: deploymentReady
+        ? `${name} is live on the Vercel edge. Connect a custom domain when you are ready.`
+        : `${name} is building on Vercel. Connect a custom domain after the deployment is ready.`,
       type: 'success',
       link: `/dashboard/projects/${projectId}`,
       read: false,

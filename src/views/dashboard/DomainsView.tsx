@@ -37,6 +37,7 @@ export const DomainsView: React.FC = () => {
   const [inputDomain, setInputDomain] = useState('');
   const [addingDomain, setAddingDomain] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadData = async () => {
     if (user) {
@@ -51,11 +52,12 @@ export const DomainsView: React.FC = () => {
         );
         setDomains(customOnly);
         setProjects(pList);
+        setLoadError(null);
         if (pList.length > 0 && !selectedProjectId) {
           setSelectedProjectId(pList[0].id);
         }
       } catch (err: any) {
-        console.error('Error loading domains:', err);
+        setLoadError(err.message || 'Could not load domains.');
       } finally {
         setLoading(false);
       }
@@ -165,6 +167,12 @@ export const DomainsView: React.FC = () => {
           </button>
         )}
       </div>
+
+      {loadError && (
+        <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+          {loadError}
+        </p>
+      )}
 
       {/* Add Domain Modal */}
       {showAddModal && (

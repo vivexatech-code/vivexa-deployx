@@ -8,7 +8,6 @@ import {
   getDocs,
   query,
   where,
-  orderBy,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { ROOT_DOMAIN } from '../config/constants';
@@ -125,36 +124,22 @@ export const domainService = {
    * List custom domains for a specific project from Firestore
    */
   async getProjectDomains(projectId: string): Promise<DomainRecord[]> {
-    try {
-      const q = query(
-        collection(db, 'domains'),
-        where('projectId', '==', projectId)
-      );
-      const snap = await getDocs(q);
-      return snap.docs
-        .map((d) => ({ id: d.id, ...(d.data() as Omit<DomainRecord, 'id'>) }))
-        .filter((d) => d.status !== 'removed' && (d as any).type !== 'vivexa_subdomain');
-    } catch {
-      return [];
-    }
+    const q = query(collection(db, 'domains'), where('projectId', '==', projectId));
+    const snap = await getDocs(q);
+    return snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<DomainRecord, 'id'>) }))
+      .filter((d) => d.status !== 'removed' && (d as any).type !== 'vivexa_subdomain');
   },
 
   /**
    * List all custom domains belonging to a user from Firestore
    */
   async getUserDomains(userId: string): Promise<DomainRecord[]> {
-    try {
-      const q = query(
-        collection(db, 'domains'),
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
-      );
-      const snap = await getDocs(q);
-      return snap.docs
-        .map((d) => ({ id: d.id, ...(d.data() as Omit<DomainRecord, 'id'>) }))
-        .filter((d) => d.status !== 'removed' && (d as any).type !== 'vivexa_subdomain');
-    } catch {
-      return [];
-    }
+    const q = query(collection(db, 'domains'), where('userId', '==', userId));
+    const snap = await getDocs(q);
+    return snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<DomainRecord, 'id'>) }))
+      .filter((d) => d.status !== 'removed' && (d as any).type !== 'vivexa_subdomain')
+      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   },
 };

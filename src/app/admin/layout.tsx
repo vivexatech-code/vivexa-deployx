@@ -3,8 +3,8 @@ import { AdminGuard } from '@/components/auth/AdminGuard';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 
 export const metadata: Metadata = {
-  title: 'Admin Console — Vivexa Hosting',
-  description: 'Manage users, subscriptions, invoices, and system resources on Vivexa Hosting.',
+  title: 'Admin Console — Vivexa DeployX',
+  description: 'Manage users, subscriptions, invoices, and system resources on Vivexa DeployX.',
 };
 
 export default function AdminRootLayout({

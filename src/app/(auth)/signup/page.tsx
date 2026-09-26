@@ -4,8 +4,8 @@ import { Footer } from '@/components/layout/Footer';
 import { SignupView } from '@/views/public/SignupView';
 
 export const metadata: Metadata = {
-  title: 'Sign Up — Vivexa Hosting',
-  description: 'Create a new Vivexa Hosting account with email or Google authentication.',
+  title: 'Sign Up — Vivexa DeployX',
+  description: 'Create a new Vivexa DeployX account with email or Google authentication.',
 };
 
 export default function SignupPage() {

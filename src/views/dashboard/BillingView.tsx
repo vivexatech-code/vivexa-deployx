@@ -54,8 +54,8 @@ export const BillingView: React.FC = () => {
       setSubscription(usage.subscription);
       setPayments(payList);
       setInvoices(invList);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Could not load billing data.');
     } finally {
       setLoading(false);
     }
@@ -392,7 +392,7 @@ export const BillingView: React.FC = () => {
                   </p>
                 </div>
                 <div className="text-right text-xs">
-                  <p className="font-bold text-slate-900">VIVEXA HOSTING</p>
+                  <p className="font-bold text-slate-900">VIVEXA DEPLOYX</p>
                   <p className="text-slate-500">vivexatech.in</p>
                   <p className="text-slate-500">GSTIN: 29AAAAA0000A1Z5</p>
                   <p className="text-slate-500">Bengaluru, Karnataka, India</p>

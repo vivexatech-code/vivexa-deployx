@@ -173,7 +173,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         {/* Top Header */}
         <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-            <span>Vivexa</span>
+            <span>Vivexa DeployX</span>
             <ChevronRight className="w-3 h-3" />
             <span className="text-slate-900 font-semibold capitalize">
               {path.split('/')[2] || 'Overview'}

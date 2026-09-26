@@ -146,7 +146,7 @@ export const HomeView: React.FC = () => {
       <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight sm:text-4xl mb-4">
-            How Vivexa Hosting Works
+            How Vivexa DeployX Works
           </h2>
           <p className="text-slate-600 text-base">
             From registration to live production in five frictionless steps.

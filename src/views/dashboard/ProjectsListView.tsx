@@ -23,12 +23,18 @@ export const ProjectsListView: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadProjects = async () => {
-    if (user) {
+    if (!user) return;
+    try {
       const list = await projectService.getUserProjects(user.uid);
       setProjects(list);
+      setLoadError(null);
+    } catch (err: any) {
+      setLoadError(err.message || 'Could not load projects.');
+    } finally {
       setLoading(false);
     }
   };
@@ -84,6 +90,12 @@ This action cannot be undone and will remove associated domains and Vercel edge 
           New Project
         </button>
       </div>
+
+      {loadError && (
+        <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+          {loadError}
+        </p>
+      )}
 
       {/* Search Filter */}
       <div className="relative max-w-md">

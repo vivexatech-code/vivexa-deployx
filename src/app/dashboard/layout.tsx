@@ -3,8 +3,8 @@ import { AuthGuard } from '@/components/auth/AuthGuard';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
 export const metadata: Metadata = {
-  title: 'Dashboard — Vivexa Hosting',
-  description: 'Manage your projects, custom domains, deployments, and subscription on Vivexa Hosting.',
+  title: 'Dashboard — Vivexa DeployX',
+  description: 'Manage your projects, custom domains, deployments, and subscription on Vivexa DeployX.',
 };
 
 export default function DashboardRootLayout({

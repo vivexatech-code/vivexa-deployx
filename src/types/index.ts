@@ -1,5 +1,5 @@
 /**
- * Vivexa Hosting - Domain & Entity Types
+ * Vivexa DeployX - Domain & Entity Types
  * Strict TypeScript types for production hosting platform
  */
 

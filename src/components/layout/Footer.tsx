@@ -17,7 +17,7 @@ export const Footer: React.FC = () => {
                 <Cloud className="w-4 h-4 text-indigo-400" />
               </div>
               <span className="font-extrabold tracking-tight text-slate-900 text-base">
-                VIVEXA HOSTING
+                VIVEXA DEPLOYX
               </span>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed">
@@ -83,7 +83,7 @@ export const Footer: React.FC = () => {
         </div>
 
         <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-          <p>© {new Date().getFullYear()} Vivexa Hosting (vivexatech.in). All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Vivexa DeployX (vivexatech.in). All rights reserved.</p>
           <p className="flex items-center gap-1">
             Engineered with <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" /> for modern creators and enterprises.
           </p>

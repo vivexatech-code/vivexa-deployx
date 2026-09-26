@@ -9,6 +9,7 @@ import {
   getDocs,
   setDoc,
   query,
+  where,
   orderBy,
   limit,
 } from 'firebase/firestore';
@@ -87,17 +88,11 @@ export const invoiceService = {
    * Get all invoices for a specific user
    */
   async getUserInvoices(userId: string): Promise<InvoiceRecord[]> {
-    try {
-      const q = query(
-        collection(db, 'invoices'),
-        orderBy('issuedAt', 'desc')
-      );
-      const snap = await getDocs(q);
-      const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<InvoiceRecord, 'id'>) }));
-      return list.filter((inv) => inv.userId === userId);
-    } catch {
-      return [];
-    }
+    const q = query(collection(db, 'invoices'), where('userId', '==', userId));
+    const snap = await getDocs(q);
+    return snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<InvoiceRecord, 'id'>) }))
+      .sort((a, b) => (b.issuedAt || '').localeCompare(a.issuedAt || ''));
   },
 
   /**
@@ -123,7 +118,7 @@ export const invoiceService = {
       <div style="font-family: 'Plus Jakarta Sans', system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; color: #1e293b; background: #ffffff;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e2e8f0; padding-bottom: 24px; margin-bottom: 32px;">
           <div>
-            <h1 style="font-size: 28px; font-weight: 800; color: #0f172a; margin: 0 0 4px 0; letter-spacing: -0.5px;">VIVEXA HOSTING</h1>
+            <h1 style="font-size: 28px; font-weight: 800; color: #0f172a; margin: 0 0 4px 0; letter-spacing: -0.5px;">VIVEXA DEPLOYX</h1>
             <p style="font-size: 14px; color: #64748b; margin: 0;">vivexatech.in &bull; Cloud Hosting & Edge Platform</p>
             <p style="font-size: 12px; color: #94a3b8; margin: 4px 0 0 0;">GSTIN: 29AAAAA0000A1Z5</p>
           </div>
@@ -190,7 +185,7 @@ export const invoiceService = {
 
         <div style="border-top: 1px solid #e2e8f0; padding-top: 24px; text-align: center; font-size: 12px; color: #94a3b8;">
           <p style="margin: 0 0 4px 0;">This is a computer generated invoice and requires no physical signature.</p>
-          <p style="margin: 0;">Questions? Contact vivexatech@gmail.com | Thank you for choosing Vivexa Hosting.</p>
+          <p style="margin: 0;">Questions? Contact vivexatech@gmail.com | Thank you for choosing Vivexa DeployX.</p>
         </div>
       </div>
     `;

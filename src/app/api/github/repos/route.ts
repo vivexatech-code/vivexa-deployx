@@ -1,45 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { tokenStore } from '@/lib/github/tokenStore';
-
-function getUserId(req: NextRequest): string | null {
-  const headerUid = req.headers.get('x-user-id');
-  if (headerUid) return headerUid.trim();
-
-  const authHeader = req.headers.get('authorization');
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.substring(7).trim();
-    if (token && !token.includes('.')) return token;
-    if (token && token.split('.').length === 3) {
-      try {
-        const payloadBase64 = token.split('.')[1];
-        const payloadJson = Buffer.from(payloadBase64, 'base64').toString('utf-8');
-        const payload = JSON.parse(payloadJson);
-        if (payload.user_id || payload.sub) return payload.user_id || payload.sub;
-      } catch {}
-    }
-  }
-
-  const { searchParams } = new URL(req.url);
-  return searchParams.get('userId');
-}
+import { authenticateApiRequest } from '@/lib/firebase/admin';
 
 export async function GET(req: NextRequest) {
-  const userId = getUserId(req);
-  if (!userId) {
-    return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+  const user = await authenticateApiRequest(req);
+  if (!user) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   }
+  const userId = user.uid;
 
   const { searchParams } = new URL(req.url);
   const search = searchParams.get('search') || '';
 
-  const stored = tokenStore.getToken(userId);
+  const stored = await tokenStore.getToken(userId);
 
   if (stored && stored.token && stored.token !== 'demo_simulated_token') {
     try {
       const ghRes = await fetch('https://api.github.com/user/repos?per_page=100&sort=updated', {
         headers: {
           Authorization: `Bearer ${stored.token}`,
-          'User-Agent': 'Vivexa-Hosting-Platform',
+          'User-Agent': 'Vivexa-DeployX',
           Accept: 'application/vnd.github.v3+json',
         },
       });
@@ -77,7 +57,17 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Simulated fallback for demo / test environment
+  if (!stored || stored.token !== 'demo_simulated_token' || process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      {
+        error: stored
+          ? 'Could not load repositories from GitHub. Reconnect your account and try again.'
+          : 'GitHub is not connected. Connect GitHub and try again.',
+      },
+      { status: stored ? 502 : 409 }
+    );
+  }
+
   const demoRepos = [
     {
       id: 101,

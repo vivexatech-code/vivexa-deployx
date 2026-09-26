@@ -13,9 +13,32 @@ let firebaseApp: any = null;
 let adminDb: any = null;
 let adminAuth: any = null;
 
+export function isAdminConfigured(): boolean {
+  return Boolean(
+    process.env.FIREBASE_ADMIN_CLIENT_EMAIL &&
+      process.env.FIREBASE_ADMIN_PRIVATE_KEY &&
+      process.env.FIREBASE_ADMIN_PRIVATE_KEY.includes('BEGIN PRIVATE KEY')
+  );
+}
+
+function adminEmailAllowlist(): Set<string> {
+  return new Set(
+    (process.env.ADMIN_EMAILS || '')
+      .split(',')
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean)
+  );
+}
+
 export function getAdminServices() {
   if (adminDb && adminAuth) {
     return { adminDb, adminAuth };
+  }
+
+  if (!isAdminConfigured()) {
+    throw new Error(
+      'Firebase Admin credentials are not configured. Set FIREBASE_ADMIN_CLIENT_EMAIL and FIREBASE_ADMIN_PRIVATE_KEY in .env.local.'
+    );
   }
 
   const apps = getApps();
@@ -33,120 +56,82 @@ export function getAdminServices() {
     }
 
     const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || config.projectId;
-    const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
-    const rawPrivateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
+    const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL as string;
+    const privateKey = (process.env.FIREBASE_ADMIN_PRIVATE_KEY as string).replace(/\\n/g, '\n');
 
-    if (clientEmail && rawPrivateKey) {
-      const privateKey = rawPrivateKey.replace(/\\n/g, '\n');
-      firebaseApp = initializeApp({
-        credential: cert({
-          projectId,
-          clientEmail,
-          privateKey,
-        }),
-      });
-    } else {
-      firebaseApp = initializeApp({
+    firebaseApp = initializeApp({
+      credential: cert({
         projectId,
-      });
-    }
+        clientEmail,
+        privateKey,
+      }),
+    });
   }
 
-  let firestoreDatabaseId = '';
-  try {
-    const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
-    if (fs.existsSync(configPath)) {
-      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      firestoreDatabaseId = config.firestoreDatabaseId || '';
-    }
-  } catch {}
+  const firestoreDatabaseId =
+    process.env.FIRESTORE_DATABASE_ID?.trim() ||
+    (() => {
+      try {
+        const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
+        if (fs.existsSync(configPath)) {
+          const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+          return String(config.firestoreDatabaseId || '').trim();
+        }
+      } catch {
+        /* ignore */
+      }
+      return '';
+    })();
 
-  adminDb = firestoreDatabaseId
-    ? getFirestore(firebaseApp, firestoreDatabaseId)
-    : getFirestore(firebaseApp);
+  adminDb =
+    firestoreDatabaseId && firestoreDatabaseId !== '(default)'
+      ? getFirestore(firebaseApp, firestoreDatabaseId)
+      : getFirestore(firebaseApp);
   adminAuth = getAuth(firebaseApp);
 
   return { adminDb, adminAuth };
 }
 
 /**
- * Server-side request authenticator for Next.js Route Handlers
+ * Server-side request authenticator for Next.js Route Handlers.
+ * Accepts only a verified Firebase ID token.
  */
 export async function authenticateApiRequest(
   req: Request
 ): Promise<{ uid: string; email?: string; role: 'user' | 'admin' } | null> {
-  const { adminDb, adminAuth } = getAdminServices();
+  if (!isAdminConfigured()) {
+    return null;
+  }
 
   const authHeader = req.headers.get('authorization') || '';
-  if (authHeader.startsWith('Bearer ')) {
-    const idToken = authHeader.substring(7).trim();
-    const isJwt = idToken.split('.').length === 3;
-
-    if (isJwt) {
-      try {
-        const decoded = await adminAuth.verifyIdToken(idToken);
-        const uid = decoded.uid;
-        const email = decoded.email || '';
-
-        let role: 'user' | 'admin' = 'user';
-        if (email === 'vivexatech@gmail.com') {
-          role = 'admin';
-        } else {
-          const userDoc = await adminDb.collection('users').doc(uid).get();
-          if (userDoc.exists && userDoc.data()?.role === 'admin') {
-            role = 'admin';
-          }
-        }
-
-        return { uid, email, role };
-      } catch (err: any) {
-        console.warn('Firebase ID token verification failed:', err.message);
-      }
-    } else if (idToken && !idToken.includes(' ') && idToken.length >= 10 && idToken.length <= 128) {
-      const fallbackUid = idToken;
-      try {
-        const userDoc = await adminDb.collection('users').doc(fallbackUid).get();
-        if (userDoc.exists) {
-          const data = userDoc.data();
-          const role = (data?.role === 'admin' || data?.email === 'vivexatech@gmail.com') ? 'admin' : 'user';
-          return { uid: fallbackUid, email: data?.email, role };
-        }
-        return { uid: fallbackUid, role: 'user' };
-      } catch {
-        return { uid: fallbackUid, role: 'user' };
-      }
-    }
+  if (!authHeader.startsWith('Bearer ')) {
+    return null;
   }
 
-  const customHeaderUid = req.headers.get('x-user-id');
-  if (customHeaderUid) {
-    try {
-      const userDoc = await adminDb.collection('users').doc(customHeaderUid).get();
-      if (userDoc.exists) {
-        const data = userDoc.data();
-        const role = (data?.role === 'admin' || data?.email === 'vivexatech@gmail.com') ? 'admin' : 'user';
-        return { uid: customHeaderUid, email: data?.email, role };
-      }
-      return { uid: customHeaderUid, role: 'user' };
-    } catch {
-      return { uid: customHeaderUid, role: 'user' };
-    }
+  const idToken = authHeader.substring(7).trim();
+  if (idToken.split('.').length !== 3) {
+    return null;
   }
 
-  // Parse URL search params for userId fallback
   try {
-    const url = new URL(req.url);
-    const queryUid = url.searchParams.get('userId');
-    if (queryUid) {
-      const userDoc = await adminDb.collection('users').doc(queryUid).get();
-      if (userDoc.exists) {
-        const data = userDoc.data();
-        const role = (data?.role === 'admin' || data?.email === 'vivexatech@gmail.com') ? 'admin' : 'user';
-        return { uid: queryUid, email: data?.email, role };
-      }
-      return { uid: queryUid, role: 'user' };
-    }
-  } catch {}
+    const { adminDb, adminAuth } = getAdminServices();
+    const decoded = await adminAuth.verifyIdToken(idToken);
+    const uid = decoded.uid;
+    const email = decoded.email || '';
 
-  return null;
+    let role: 'user' | 'admin' = 'user';
+    if (email && adminEmailAllowlist().has(email.toLowerCase())) {
+      role = 'admin';
+    } else {
+      const userDoc = await adminDb.collection('users').doc(uid).get();
+      if (userDoc.exists && userDoc.data()?.role === 'admin') {
+        role = 'admin';
+      }
+    }
+
+    return { uid, email, role };
+  } catch (err: any) {
+    console.warn('Firebase ID token verification failed:', err.message);
+    return null;
+  }
 }

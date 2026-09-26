@@ -12,7 +12,6 @@ import {
   updateDoc,
   query,
   where,
-  orderBy,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { fetchApi } from './apiClient';
@@ -126,17 +125,11 @@ export const projectService = {
    * List all projects for a user
    */
   async getUserProjects(userId: string): Promise<Project[]> {
-    try {
-      const q = query(
-        collection(db, 'projects'),
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
-      );
-      const snap = await getDocs(q);
-      return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Project, 'id'>) }));
-    } catch {
-      return [];
-    }
+    const q = query(collection(db, 'projects'), where('userId', '==', userId));
+    const snap = await getDocs(q);
+    return snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<Project, 'id'>) }))
+      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   },
 
   /**
@@ -163,33 +156,21 @@ export const projectService = {
    * Get deployments for a specific project
    */
   async getProjectDeployments(projectId: string): Promise<Deployment[]> {
-    try {
-      const q = query(
-        collection(db, 'deployments'),
-        where('projectId', '==', projectId),
-        orderBy('createdAt', 'desc')
-      );
-      const snap = await getDocs(q);
-      return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Deployment, 'id'>) }));
-    } catch {
-      return [];
-    }
+    const q = query(collection(db, 'deployments'), where('projectId', '==', projectId));
+    const snap = await getDocs(q);
+    return snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<Deployment, 'id'>) }))
+      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   },
 
   /**
    * Get all deployments for a user across all projects
    */
   async getUserDeployments(userId: string): Promise<Deployment[]> {
-    try {
-      const q = query(
-        collection(db, 'deployments'),
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
-      );
-      const snap = await getDocs(q);
-      return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Deployment, 'id'>) }));
-    } catch {
-      return [];
-    }
+    const q = query(collection(db, 'deployments'), where('userId', '==', userId));
+    const snap = await getDocs(q);
+    return snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<Deployment, 'id'>) }))
+      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   },
 };

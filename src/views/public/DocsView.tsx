@@ -34,7 +34,7 @@ export const DocsView: React.FC = () => {
           <ol className="list-decimal pl-5 space-y-2 mb-4">
             <li>Navigate to <strong>Dashboard &rarr; Projects &rarr; Import Git Repository</strong>.</li>
             <li>Click <strong>Connect GitHub</strong> to open GitHub's official authorization dialog.</li>
-            <li>Approve Vivexa Hosting to grant repository access (public and private).</li>
+            <li>Approve Vivexa DeployX to grant repository access (public and private).</li>
             <li>Search or select your repository and choose your desired deployment branch (e.g. <code className="font-mono text-xs text-slate-800 font-semibold">main</code>).</li>
             <li>Configure your build parameters and click <strong>Deploy Project</strong>.</li>
           </ol>

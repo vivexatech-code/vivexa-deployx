@@ -37,23 +37,36 @@ export const DashboardOverviewView: React.FC = () => {
   const [deployments, setDeployments] = useState<Deployment[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) {
-      Promise.all([
-        planService.getUserUsage(user.uid),
-        projectService.getUserProjects(user.uid),
-        projectService.getUserDeployments(user.uid),
-        billingService.getUserPayments(user.uid),
-      ]).then(([usageData, projData, depData, payData]) => {
+    if (!user) return;
+    Promise.all([
+      planService.getUserUsage(user.uid),
+      projectService.getUserProjects(user.uid),
+      projectService.getUserDeployments(user.uid),
+      billingService.getUserPayments(user.uid),
+    ])
+      .then(([usageData, projData, depData, payData]) => {
         setUsage(usageData);
         setProjects(projData);
         setDeployments(depData);
         setPayments(payData);
-        setLoading(false);
-      });
-    }
+        setLoadError(null);
+      })
+      .catch((err: any) => {
+        setLoadError(err.message || 'Could not load the dashboard.');
+      })
+      .finally(() => setLoading(false));
   }, [user]);
+
+  if (loadError) {
+    return (
+      <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+        {loadError}
+      </p>
+    );
+  }
 
   if (loading || !usage) {
     return (

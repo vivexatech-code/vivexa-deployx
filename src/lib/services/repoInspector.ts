@@ -1,4 +1,5 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { execSync } from 'child_process';
 import { tokenStore } from '../github/tokenStore';
@@ -34,18 +35,18 @@ export class RepoInspector {
 
     let githubToken = params.token;
     if (!githubToken && params.userId) {
-      const stored = tokenStore.getToken(params.userId);
+      const stored = await tokenStore.getToken(params.userId);
       if (stored && stored.token && stored.token !== 'demo_simulated_token') {
         githubToken = stored.token;
       }
     }
 
-    const tmpDir = path.join('/tmp', `inspect_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`);
+    const tmpDir = path.join(os.tmpdir(), `inspect_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`);
     fs.mkdirSync(tmpDir, { recursive: true });
 
     try {
       const headers: Record<string, string> = {
-        'User-Agent': 'Vivexa-Hosting-Platform',
+        'User-Agent': 'Vivexa-DeployX',
       };
       if (githubToken) {
         headers['Authorization'] = `Bearer ${githubToken}`;

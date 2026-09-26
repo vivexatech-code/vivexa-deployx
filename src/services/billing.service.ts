@@ -9,7 +9,6 @@ import {
   getDocs,
   query,
   where,
-  orderBy,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { GST_RATE } from '../config/constants';
@@ -79,7 +78,7 @@ export const billingService = {
       key: orderData.keyId,
       amount: orderData.amount, // in paise
       currency: orderData.currency || 'INR',
-      name: 'Vivexa Hosting',
+      name: 'Vivexa DeployX',
       description: `${orderData.planName} Plan (includes 18% GST)`,
       image: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2601.png',
       order_id: orderData.orderId,
@@ -144,35 +143,21 @@ export const billingService = {
    * Get user payment history from Firestore
    */
   async getUserPayments(userId: string): Promise<PaymentRecord[]> {
-    try {
-      const q = query(
-        collection(db, 'payments'),
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
-      );
-      const snap = await getDocs(q);
-      return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<PaymentRecord, 'id'>) }));
-    } catch (err) {
-      console.warn('Error getting payments:', err);
-      return [];
-    }
+    const q = query(collection(db, 'payments'), where('userId', '==', userId));
+    const snap = await getDocs(q);
+    return snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<PaymentRecord, 'id'>) }))
+      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   },
 
   /**
    * Get user invoices from Firestore
    */
   async getUserInvoices(userId: string): Promise<InvoiceRecord[]> {
-    try {
-      const q = query(
-        collection(db, 'invoices'),
-        where('userId', '==', userId),
-        orderBy('issuedAt', 'desc')
-      );
-      const snap = await getDocs(q);
-      return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
-    } catch (err) {
-      console.warn('Error getting invoices:', err);
-      return [];
-    }
+    const q = query(collection(db, 'invoices'), where('userId', '==', userId));
+    const snap = await getDocs(q);
+    return snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as any) }))
+      .sort((a, b) => (b.issuedAt || '').localeCompare(a.issuedAt || ''));
   },
 };

@@ -4,7 +4,7 @@ import { Footer } from '@/components/layout/Footer';
 import { FeaturesView } from '@/views/public/FeaturesView';
 
 export const metadata: Metadata = {
-  title: 'Features — Vivexa Hosting',
+  title: 'Features — Vivexa DeployX',
   description: 'Automated GitHub deployments, global Vercel edge network, SSL certificates, and custom domains.',
 };
 

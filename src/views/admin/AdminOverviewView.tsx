@@ -122,7 +122,7 @@ export const AdminOverviewView: React.FC = () => {
           System Overview & Analytics
         </h1>
         <p className="text-xs text-slate-500 mt-0.5">
-          Real-time metrics for Vivexa Hosting infrastructure, users, revenue, and deployments.
+          Real-time metrics for Vivexa DeployX infrastructure, users, revenue, and deployments.
         </p>
       </div>
 

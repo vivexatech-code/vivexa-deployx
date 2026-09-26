@@ -4,8 +4,8 @@ import { Footer } from '@/components/layout/Footer';
 import { DocsView } from '@/views/public/DocsView';
 
 export const metadata: Metadata = {
-  title: 'Documentation — Vivexa Hosting',
-  description: 'Learn how to deploy your projects, connect custom domains, and configure DNS on Vivexa.',
+  title: 'Documentation — Vivexa DeployX',
+  description: 'Learn how to deploy your projects, connect custom domains, and configure DNS on Vivexa DeployX.',
 };
 
 export default function DocsPage() {

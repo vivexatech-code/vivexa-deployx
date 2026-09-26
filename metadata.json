@@ -1,5 +1,5 @@
 {
-  "name": "Vivexa Hosting",
+  "name": "Vivexa DeployX",
   "description": "Subscription-based hosting platform providing automated GitHub deployments, Vercel edge infrastructure, custom domains, and Razorpay billing.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

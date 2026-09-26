@@ -129,7 +129,7 @@ export const FeaturesView: React.FC = () => {
           onClick={() => navigate('/signup')}
           className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 transition-colors shadow-sm"
         >
-          Start Hosting on Vivexa
+          Start on Vivexa DeployX
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>

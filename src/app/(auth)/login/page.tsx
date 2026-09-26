@@ -4,8 +4,8 @@ import { Footer } from '@/components/layout/Footer';
 import { LoginView } from '@/views/public/LoginView';
 
 export const metadata: Metadata = {
-  title: 'Sign In — Vivexa Hosting',
-  description: 'Log in to your Vivexa Hosting dashboard with email or Google authentication.',
+  title: 'Sign In — Vivexa DeployX',
+  description: 'Log in to your Vivexa DeployX dashboard with email or Google authentication.',
 };
 
 export default function LoginPage() {

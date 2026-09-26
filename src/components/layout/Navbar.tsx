@@ -26,7 +26,7 @@ export const Navbar: React.FC = () => {
               VIVEXA
             </span>
             <span className="text-[10px] tracking-widest text-slate-500 font-semibold uppercase mt-0.5">
-              HOSTING
+              DEPLOYX
             </span>
           </div>
         </button>

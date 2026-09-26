@@ -4,7 +4,7 @@ import { Footer } from '@/components/layout/Footer';
 import { HomeView } from '@/views/public/HomeView';
 
 export const metadata: Metadata = {
-  title: 'Vivexa Hosting — Simple Hosting for Modern Websites',
+  title: 'Vivexa DeployX — Simple Hosting for Modern Websites',
   description:
     'Deploy web projects instantly from GitHub with automated builds, custom domains, and Vercel edge infrastructure.',
 };

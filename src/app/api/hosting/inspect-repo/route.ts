@@ -5,6 +5,9 @@ import { RepoInspector } from '@/lib/services/repoInspector';
 export async function POST(req: NextRequest) {
   try {
     const user = await authenticateApiRequest(req);
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
     const body = await req.json().catch(() => ({}));
     const { owner, repo, branch = 'main', rootDirectory = '' } = body;
 
@@ -17,7 +20,7 @@ export async function POST(req: NextRequest) {
       repo,
       branch,
       rootDirectory,
-      userId: user?.uid,
+      userId: user.uid,
     });
 
     return NextResponse.json(result);

@@ -113,7 +113,7 @@ export const AdminInvoicesView: React.FC = () => {
                   </p>
                 </div>
                 <div className="text-right text-xs">
-                  <p className="font-bold text-slate-900">VIVEXA HOSTING</p>
+                  <p className="font-bold text-slate-900">VIVEXA DEPLOYX</p>
                   <p className="text-slate-500">vivexatech.in</p>
                   <p className="text-slate-500">GSTIN: 29AAAAA0000A1Z5</p>
                 </div>

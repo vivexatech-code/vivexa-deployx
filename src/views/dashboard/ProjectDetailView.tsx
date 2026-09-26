@@ -37,6 +37,7 @@ export const ProjectDetailView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'domains' | 'deployments' | 'env'>('overview');
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [redeploying, setRedeploying] = useState(false);
 
   // Custom Domain input
@@ -70,8 +71,9 @@ export const ProjectDetailView: React.FC = () => {
         (d) => d.type !== 'vivexa_subdomain' && !d.domain.endsWith('.vivexatech.in')
       );
       setDomains(customOnly);
-    } catch (err) {
-      console.error(err);
+      setLoadError(null);
+    } catch (err: any) {
+      setLoadError(err.message || 'Could not load this project.');
     } finally {
       setLoading(false);
     }
@@ -181,6 +183,14 @@ export const ProjectDetailView: React.FC = () => {
     setProject({ ...project, envVars: nextEnv });
   };
 
+  if (loadError && !project) {
+    return (
+      <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+        {loadError}
+      </p>
+    );
+  }
+
   if (loading || !project) {
     return (
       <div className="space-y-6 animate-pulse">
@@ -202,6 +212,11 @@ export const ProjectDetailView: React.FC = () => {
 
   return (
     <div className="space-y-8">
+      {loadError && (
+        <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+          {loadError}
+        </p>
+      )}
       {/* Back button & Title header */}
       <div>
         <button

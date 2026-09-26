@@ -12,11 +12,17 @@ export const DeploymentsView: React.FC = () => {
   const { user } = useAuth();
   const [deployments, setDeployments] = useState<Deployment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadDeployments = async () => {
-    if (user) {
+    if (!user) return;
+    try {
       const list = await projectService.getUserDeployments(user.uid);
       setDeployments(list);
+      setLoadError(null);
+    } catch (err: any) {
+      setLoadError(err.message || 'Could not load deployments.');
+    } finally {
       setLoading(false);
     }
   };
@@ -45,6 +51,12 @@ export const DeploymentsView: React.FC = () => {
           Refresh Status
         </button>
       </div>
+
+      {loadError && (
+        <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+          {loadError}
+        </p>
+      )}
 
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
         {loading ? (

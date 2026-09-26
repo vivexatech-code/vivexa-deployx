@@ -25,7 +25,19 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-// Initialize Firestore with specific custom database ID if present
-export const db = firebaseConfigFile.firestoreDatabaseId
-  ? getFirestore(app, firebaseConfigFile.firestoreDatabaseId)
+/**
+ * This Firebase project uses a named Firestore database (no "(default)" DB).
+ * Prefer NEXT_PUBLIC_FIRESTORE_DATABASE_ID, then the applet config id.
+ */
+function resolveFirestoreDatabaseId(): string | undefined {
+  const fromEnv = process.env.NEXT_PUBLIC_FIRESTORE_DATABASE_ID?.trim();
+  if (fromEnv && fromEnv !== '(default)') return fromEnv;
+  const fromFile = String(firebaseConfigFile.firestoreDatabaseId || '').trim();
+  if (fromFile && fromFile !== '(default)') return fromFile;
+  return undefined;
+}
+
+const firestoreDatabaseId = resolveFirestoreDatabaseId();
+export const db = firestoreDatabaseId
+  ? getFirestore(app, firestoreDatabaseId)
   : getFirestore(app);

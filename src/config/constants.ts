@@ -1,10 +1,10 @@
 /**
- * Vivexa Hosting Constants
+ * Vivexa DeployX Constants
  */
 
 import { Plan } from '../types';
 
-export const APP_NAME = 'Vivexa Hosting';
+export const APP_NAME = 'Vivexa DeployX';
 export const ROOT_DOMAIN = 'vivexatech.in';
 export const GST_RATE = 0.18; // 18% standard GST in India
 

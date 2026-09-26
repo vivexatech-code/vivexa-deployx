@@ -5,6 +5,7 @@
  */
 
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import crypto from 'crypto';
 import { execSync } from 'child_process';
@@ -92,16 +93,16 @@ export class VercelService {
       name: sanitizedName,
     };
 
-    if (config.framework !== undefined) {
+    if (config.framework) {
       payload.framework = config.framework;
     }
-    if (config.buildCommand !== undefined) {
+    if (config.buildCommand) {
       payload.buildCommand = config.buildCommand;
     }
-    if (config.outputDirectory !== undefined) {
+    if (config.outputDirectory) {
       payload.outputDirectory = config.outputDirectory;
     }
-    if (config.installCommand !== undefined) {
+    if (config.installCommand) {
       payload.installCommand = config.installCommand;
     }
     if (config.rootDirectory) {
@@ -451,7 +452,7 @@ export class VercelService {
     let filesManifest: Array<{ file: string; sha: string; size: number }> = [];
     const fileBufferMap = new Map<string, Buffer>();
 
-    const tmpDir = path.join('/tmp', `vdeploy_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`);
+    const tmpDir = path.join(os.tmpdir(), `vdeploy_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`);
 
     try {
       if (params.repoOwner && params.repoName) {
@@ -459,14 +460,14 @@ export class VercelService {
 
         let ghToken = params.githubToken;
         if (!ghToken && params.userId) {
-          const stored = tokenStore.getToken(params.userId);
+          const stored = await tokenStore.getToken(params.userId);
           if (stored && stored.token && stored.token !== 'demo_simulated_token') {
             ghToken = stored.token;
           }
         }
 
         const ghHeaders: Record<string, string> = {
-          'User-Agent': 'Vivexa-Hosting-Platform',
+          'User-Agent': 'Vivexa-DeployX',
         };
         if (ghToken) {
           ghHeaders['Authorization'] = `Bearer ${ghToken}`;

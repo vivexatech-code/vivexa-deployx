@@ -49,7 +49,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const p = await authService.syncUserProfile(currentUser);
           setProfile(p);
         } catch (err) {
-          console.error('Auth synchronization error:', err);
+          console.warn('Auth synchronization error:', err);
+          // Keep the signed-in user even if Firestore is temporarily unreachable.
+          setProfile({
+            uid: currentUser.uid,
+            name: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+            email: currentUser.email || '',
+            photoURL: currentUser.photoURL || '',
+            role: currentUser.email?.toLowerCase() === 'vivexatech@gmail.com' ? 'admin' : 'user',
+            subscriptionStatus: 'none',
+            planId: null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
         }
       } else {
         setProfile(null);

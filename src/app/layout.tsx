@@ -4,18 +4,18 @@ import './globals.css';
 import { ClientProviders } from '@/components/providers/ClientProviders';
 
 export const metadata: Metadata = {
-  title: 'Vivexa Hosting — Simple Hosting for Modern Websites',
+  title: 'Vivexa DeployX — Simple Hosting for Modern Websites',
   description:
     'Subscription-based hosting platform providing automated GitHub deployments, Vercel edge infrastructure, custom domains, and Razorpay billing.',
   openGraph: {
-    title: 'Vivexa Hosting — Simple Hosting for Modern Websites',
+    title: 'Vivexa DeployX — Simple Hosting for Modern Websites',
     description:
       'Subscription-based hosting platform providing automated GitHub deployments, Vercel edge infrastructure, custom domains, and Razorpay billing.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Vivexa Hosting — Simple Hosting for Modern Websites',
+    title: 'Vivexa DeployX — Simple Hosting for Modern Websites',
     description:
       'Subscription-based hosting platform providing automated GitHub deployments, Vercel edge infrastructure, custom domains, and Razorpay billing.',
   },

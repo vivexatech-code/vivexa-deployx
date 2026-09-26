@@ -143,7 +143,7 @@ export const NewProjectView: React.FC = () => {
     setErrorMsg(null);
     try {
       const list = await githubService.getRepositories(user.uid);
-      setRepos(list);
+      setRepos(Array.isArray(list) ? list : []);
     } catch (err: any) {
       setErrorMsg(err.message || 'Could not fetch repositories from GitHub.');
     } finally {
@@ -226,7 +226,7 @@ export const NewProjectView: React.FC = () => {
 
       try {
         const bList = await githubService.getBranches(user.uid, repo.owner.login, repo.name);
-        setBranches(bList);
+        setBranches(Array.isArray(bList) ? bList : []);
         if (bList.length > 0 && !bList.some((b) => b.name === branchToUse)) {
           setSelectedBranch(bList[0].name);
         }
@@ -310,7 +310,7 @@ export const NewProjectView: React.FC = () => {
         repositoryUrl: selectedRepo.html_url,
         rootDirectory: rootDirectory.trim(),
         branch: selectedBranch,
-        framework: framework === 'static' ? '' : framework,
+        framework,
         buildCommand: buildCommand.trim(),
         outputDirectory: outputDirectory.trim(),
         installCommand: installCommand.trim(),
@@ -326,7 +326,8 @@ export const NewProjectView: React.FC = () => {
   };
 
   // Filter repos by search and visibility
-  const filteredRepos = repos.filter((r) => {
+  const repoList = Array.isArray(repos) ? repos : [];
+  const filteredRepos = repoList.filter((r) => {
     const matchesSearch =
       r.name.toLowerCase().includes(searchRepo.toLowerCase()) ||
       (r.description && r.description.toLowerCase().includes(searchRepo.toLowerCase()));
@@ -413,7 +414,7 @@ export const NewProjectView: React.FC = () => {
           <div className="max-w-md mx-auto space-y-2">
             <h2 className="text-xl font-bold text-slate-900">Connect to GitHub</h2>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Authorize Vivexa Hosting with your GitHub account to seamlessly import private and public repositories, inspect branches, and configure automated deployments.
+              Authorize Vivexa DeployX with your GitHub account to seamlessly import private and public repositories, inspect branches, and configure automated deployments.
             </p>
           </div>
 
@@ -517,7 +518,7 @@ export const NewProjectView: React.FC = () => {
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                All Repositories ({repos.length})
+                All Repositories ({repoList.length})
               </button>
               <button
                 type="button"
@@ -528,7 +529,7 @@ export const NewProjectView: React.FC = () => {
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                Public ({repos.filter((r) => !r.private).length})
+                Public ({repoList.filter((r) => !r.private).length})
               </button>
               <button
                 type="button"
@@ -539,7 +540,7 @@ export const NewProjectView: React.FC = () => {
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                Private ({repos.filter((r) => r.private).length})
+                Private ({repoList.filter((r) => r.private).length})
               </button>
             </div>
 

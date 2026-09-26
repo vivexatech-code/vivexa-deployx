@@ -176,9 +176,11 @@ export class EntitlementService {
         maxLimit: plan.maxDeployments,
         plan,
       };
-    } catch {
+    } catch (err) {
+      console.error('Deployment limit check failed:', err);
       return {
-        allowed: true,
+        allowed: false,
+        reason: 'Could not verify your deployment limit. Try again in a moment.',
         currentCount: 0,
         maxLimit: plan.maxDeployments,
         plan,

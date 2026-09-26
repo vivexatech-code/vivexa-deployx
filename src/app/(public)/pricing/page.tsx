@@ -4,7 +4,7 @@ import { Footer } from '@/components/layout/Footer';
 import { PricingView } from '@/views/public/PricingView';
 
 export const metadata: Metadata = {
-  title: 'Pricing — Vivexa Hosting',
+  title: 'Pricing — Vivexa DeployX',
   description: 'Simple, transparent hosting plans with full Razorpay billing and GST compliance.',
 };
 

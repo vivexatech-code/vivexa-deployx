@@ -10,6 +10,42 @@ import { GitHubRepo, GitHubBranch, GitHubConnection } from '../types';
 import { FRAMEWORK_PRESETS } from '../config/constants';
 import { getAuthHeaders } from './apiClient';
 
+function asList(data: unknown, key: 'repos' | 'branches'): unknown[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === 'object') {
+    const nested = (data as Record<string, unknown>)[key];
+    if (Array.isArray(nested)) return nested;
+  }
+  return [];
+}
+
+function toGitHubRepo(raw: any): GitHubRepo {
+  return {
+    id: Number(raw?.id),
+    name: raw?.name || '',
+    full_name: raw?.full_name || raw?.fullName || '',
+    owner: {
+      login: raw?.owner?.login || '',
+      avatar_url: raw?.owner?.avatar_url || raw?.owner?.avatarUrl || '',
+    },
+    html_url: raw?.html_url || raw?.htmlUrl || '',
+    description: raw?.description ?? null,
+    default_branch: raw?.default_branch || raw?.defaultBranch || 'main',
+    updated_at: raw?.updated_at || raw?.updatedAt || '',
+    private: Boolean(raw?.private ?? raw?.isPrivate),
+    language: raw?.language ?? null,
+  };
+}
+
+function toGitHubBranch(raw: any): GitHubBranch {
+  return {
+    name: raw?.name || '',
+    commit: {
+      sha: raw?.commit?.sha || raw?.commitSha || '',
+    },
+  };
+}
+
 export interface RepoInspectionResult {
   success: boolean;
   detectedFramework: string | null;
@@ -51,7 +87,8 @@ export const githubService = {
       }
 
       // 2. Fallback check with server-side connection endpoint
-      const res = await fetch(`/api/github/connection?userId=${encodeURIComponent(userId)}`);
+      const authHeaders = await getAuthHeaders();
+      const res = await fetch('/api/github/connection', { headers: authHeaders });
       if (res.ok) {
         const serverConn = await res.json();
         if (serverConn.connected) {
@@ -88,7 +125,11 @@ export const githubService = {
     }
 
     const origin = window.location.origin;
-    const connectRes = await fetch(`/api/github/connect?userId=${encodeURIComponent(userId)}&origin=${encodeURIComponent(origin)}`);
+    const authHeaders = await getAuthHeaders();
+    const connectRes = await fetch(
+      `/api/github/connect?origin=${encodeURIComponent(origin)}`,
+      { headers: authHeaders }
+    );
 
     if (!connectRes.ok) {
       const errData = await connectRes.json().catch(() => ({ error: 'Failed to initiate GitHub OAuth' }));
@@ -113,7 +154,7 @@ export const githubService = {
     );
 
     if (!popup) {
-      throw new Error('Popup blocked by browser. Please allow popups for Vivexa Hosting to authorize GitHub.');
+      throw new Error('Popup blocked by browser. Please allow popups for Vivexa DeployX to authorize GitHub.');
     }
 
     // Wait for postMessage from popup callback
@@ -122,8 +163,7 @@ export const githubService = {
 
       const messageListener = async (event: MessageEvent) => {
         // Validate origin
-        const eventOrigin = event.origin;
-        if (!eventOrigin.endsWith('.run.app') && !eventOrigin.includes('localhost') && eventOrigin !== window.location.origin) {
+        if (event.origin !== window.location.origin) {
           return;
         }
 
@@ -192,15 +232,14 @@ export const githubService = {
   async disconnectGitHub(userId: string): Promise<void> {
     if (!userId) return;
 
-    try {
-      const authHeaders = await getAuthHeaders();
-      await fetch('/api/github/disconnect', {
-        method: 'POST',
-        headers: { ...authHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-      });
-    } catch (e) {
-      console.warn('Server disconnect notification failed:', e);
+    const authHeaders = await getAuthHeaders();
+    const res = await fetch('/api/github/disconnect', {
+      method: 'POST',
+      headers: authHeaders,
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Failed to disconnect GitHub account.');
     }
 
     try {
@@ -228,7 +267,8 @@ export const githubService = {
       throw new Error(data.error || `Failed to fetch repositories (HTTP ${res.status})`);
     }
 
-    return await res.json();
+    const data = await res.json();
+    return asList(data, 'repos').map(toGitHubRepo);
   },
 
   /**
@@ -246,7 +286,8 @@ export const githubService = {
       throw new Error(data.error || `Failed to fetch branches for ${owner}/${repo}`);
     }
 
-    return await res.json();
+    const data = await res.json();
+    return asList(data, 'branches').map(toGitHubBranch);
   },
 
   /**
