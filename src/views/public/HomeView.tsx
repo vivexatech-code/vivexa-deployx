@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import { useRouter } from '../../context/RouterContext';
 import { planService } from '../../services/plan.service';

@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import { useRouter } from '../../context/RouterContext';
 import { useAuth } from '../../context/AuthContext';
@@ -38,7 +40,8 @@ export const ProjectsListView: React.FC = () => {
   const handleDelete = async (e: React.MouseEvent, project: Project) => {
     e.stopPropagation();
     const confirmed = confirm(
-      `Are you sure you want to delete "${project.name}"?\nThis action cannot be undone and will remove associated domains and Vercel edge links.`
+      `Are you sure you want to delete "${project.name}"?
+This action cannot be undone and will remove associated domains and Vercel edge links.`
     );
     if (!confirmed || !user) return;
 

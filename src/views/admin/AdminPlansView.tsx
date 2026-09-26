@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import { planService } from '../../services/plan.service';
 import { Plan } from '../../types';

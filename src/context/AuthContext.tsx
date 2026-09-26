@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Authentication Context
  * Manages reactive Firebase auth state, user profile synchronization, and admin authorization.

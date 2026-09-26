@@ -17,55 +17,6 @@ import { fetchApi } from './apiClient';
 
 export const domainService = {
   /**
-   * Validate and normalize a subdomain string
-   */
-  validateSubdomain(subdomain: string): { valid: boolean; normalized: string; error?: string } {
-    const normalized = subdomain
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9-]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
-
-    if (!normalized || normalized.length < 2) {
-      return { valid: false, normalized, error: 'Subdomain must be at least 2 characters long.' };
-    }
-
-    if (normalized.length > 32) {
-      return { valid: false, normalized, error: 'Subdomain cannot exceed 32 characters.' };
-    }
-
-    const reserved = new Set([
-      'www', 'api', 'admin', 'billing', 'app', 'dashboard', 'auth', 'login', 'status',
-      'mail', 'smtp', 'pop', 'imap', 'ftp', 'dev', 'staging', 'test', 'demo', 'vivexa'
-    ]);
-
-    if (reserved.has(normalized)) {
-      return {
-        valid: false,
-        normalized,
-        error: `The subdomain "${normalized}" is reserved for Vivexa system infrastructure.`,
-      };
-    }
-
-    return { valid: true, normalized };
-  },
-
-  /**
-   * Check if a subdomain is already in use via backend
-   */
-  async isSubdomainAvailable(subdomain: string): Promise<boolean> {
-    try {
-      const res = await fetchApi<{ available: boolean }>(
-        `/api/hosting/check-subdomain?subdomain=${encodeURIComponent(subdomain)}`
-      );
-      return Boolean(res.available);
-    } catch {
-      return false;
-    }
-  },
-
-  /**
    * Validate custom domain format (e.g. mycompany.com or app.mycompany.com)
    */
   validateCustomDomain(domain: string): { valid: boolean; normalized: string; error?: string } {

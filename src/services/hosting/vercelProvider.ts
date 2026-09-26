@@ -18,12 +18,10 @@ export class VercelHostingProvider implements HostingProvider {
 
   constructor() {
     this.token =
-      (typeof process !== 'undefined' && process.env?.VERCEL_TOKEN) ||
-      (typeof import.meta !== 'undefined' && import.meta.env?.VITE_VERCEL_TOKEN) ||
+      (typeof process !== 'undefined' && (process.env?.VERCEL_TOKEN || process.env?.VERCEL_API_TOKEN)) ||
       '';
     this.teamId =
       (typeof process !== 'undefined' && process.env?.VERCEL_TEAM_ID) ||
-      (typeof import.meta !== 'undefined' && import.meta.env?.VITE_VERCEL_TEAM_ID) ||
       '';
   }
 

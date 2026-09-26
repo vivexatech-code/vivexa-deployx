@@ -217,6 +217,8 @@ export interface AuditLog {
   userId?: string;
   userEmail?: string;
   action: string;
+  targetType?: string;
+  targetId?: string;
   details?: Record<string, any>;
   ip?: string;
   createdAt: string;

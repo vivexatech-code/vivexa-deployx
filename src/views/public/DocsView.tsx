@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { BookOpen, Terminal, Globe, GitBranch, CreditCard, ShieldCheck } from 'lucide-react';
 

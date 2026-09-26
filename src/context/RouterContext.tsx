@@ -1,9 +1,7 @@
-/**
- * Lightweight Client-Side Router for SPA with Clean Path Matching
- * Supports direct URLs, browser history pushState, popstate, and query parameters.
- */
+'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, Suspense } from 'react';
+import { usePathname, useRouter as useNextRouter } from 'next/navigation';
 
 interface RouterContextType {
   path: string;
@@ -13,40 +11,32 @@ interface RouterContextType {
 
 const RouterContext = createContext<RouterContextType | undefined>(undefined);
 
-export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentPath, setCurrentPath] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return window.location.pathname || '/';
-    }
-    return '/';
-  });
-
-  useEffect(() => {
-    const onPopState = () => {
-      setCurrentPath(window.location.pathname || '/');
-    };
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
-  }, []);
+function RouterInner({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname() || '/';
+  const nextRouter = useNextRouter();
 
   const navigate = (to: string) => {
-    if (to === currentPath) return;
-    window.history.pushState({}, '', to);
-    setCurrentPath(to);
-    window.scrollTo(0, 0);
+    nextRouter.push(to);
   };
 
-  // Derive simple route parameters (e.g. /dashboard/projects/:id)
   const params: Record<string, string> = {};
-  const segments = currentPath.split('/').filter(Boolean);
+  const segments = pathname.split('/').filter(Boolean);
   if (segments[0] === 'dashboard' && segments[1] === 'projects' && segments[2] && segments[2] !== 'new') {
     params.projectId = segments[2];
   }
 
   return (
-    <RouterContext.Provider value={{ path: currentPath, params, navigate }}>
+    <RouterContext.Provider value={{ path: pathname, params, navigate }}>
       {children}
     </RouterContext.Provider>
+  );
+}
+
+export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
+      <RouterInner>{children}</RouterInner>
+    </Suspense>
   );
 };
 

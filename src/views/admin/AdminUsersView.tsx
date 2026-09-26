@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import { adminService } from '../../services/admin.service';
 import { UserProfile } from '../../types';
