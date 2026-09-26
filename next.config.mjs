@@ -1,6 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  async redirects() {
+    return [
+      {
+        source: '/dashboard/new-project',
+        destination: '/dashboard/projects/new',
+        permanent: true,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

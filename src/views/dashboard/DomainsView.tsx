@@ -276,7 +276,7 @@ export const DomainsView: React.FC = () => {
               </button>
             ) : (
               <button
-                onClick={() => navigate('/dashboard/new-project')}
+                onClick={() => navigate('/dashboard/projects/new')}
                 className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"
               >
                 Deploy a Project First

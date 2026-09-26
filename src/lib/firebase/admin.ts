@@ -37,7 +37,7 @@ export function getAdminServices() {
 
   if (!isAdminConfigured()) {
     throw new Error(
-      'Firebase Admin credentials are not configured. Set FIREBASE_ADMIN_CLIENT_EMAIL and FIREBASE_ADMIN_PRIVATE_KEY in .env.local.'
+      'Firebase Admin credentials are not configured. Set FIREBASE_ADMIN_CLIENT_EMAIL and FIREBASE_ADMIN_PRIVATE_KEY in the server environment.'
     );
   }
 
@@ -57,7 +57,18 @@ export function getAdminServices() {
 
     const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || config.projectId;
     const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL as string;
-    const privateKey = (process.env.FIREBASE_ADMIN_PRIVATE_KEY as string).replace(/\\n/g, '\n');
+    let privateKey = (process.env.FIREBASE_ADMIN_PRIVATE_KEY as string).trim();
+    if (
+      (privateKey.startsWith('"') && privateKey.endsWith('"')) ||
+      (privateKey.startsWith("'") && privateKey.endsWith("'"))
+    ) {
+      privateKey = privateKey.slice(1, -1);
+    }
+    privateKey = privateKey.replace(/\\n/g, '\n');
+
+    if (!projectId) {
+      throw new Error('FIREBASE_ADMIN_PROJECT_ID is required.');
+    }
 
     firebaseApp = initializeApp({
       credential: cert({
@@ -100,6 +111,7 @@ export async function authenticateApiRequest(
   req: Request
 ): Promise<{ uid: string; email?: string; role: 'user' | 'admin' } | null> {
   if (!isAdminConfigured()) {
+    console.warn('authenticateApiRequest: Firebase Admin is not configured on the server.');
     return null;
   }
 
@@ -123,9 +135,14 @@ export async function authenticateApiRequest(
     if (email && adminEmailAllowlist().has(email.toLowerCase())) {
       role = 'admin';
     } else {
-      const userDoc = await adminDb.collection('users').doc(uid).get();
-      if (userDoc.exists && userDoc.data()?.role === 'admin') {
-        role = 'admin';
+      // Role lookup must never block authentication if Firestore is briefly unavailable.
+      try {
+        const userDoc = await adminDb.collection('users').doc(uid).get();
+        if (userDoc.exists && userDoc.data()?.role === 'admin') {
+          role = 'admin';
+        }
+      } catch (roleErr: any) {
+        console.warn('authenticateApiRequest: role lookup skipped:', roleErr.message);
       }
     }
 

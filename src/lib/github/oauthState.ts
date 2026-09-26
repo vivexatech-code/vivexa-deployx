@@ -24,19 +24,28 @@ export function isSafeOrigin(origin: string): boolean {
 
 export function resolveOAuthOrigin(req: NextRequest, requested: string | null): string {
   const requestOrigin = req.nextUrl.origin;
-  const configured = [process.env.APP_URL, process.env.NEXT_PUBLIC_APP_URL]
+  const configured = [process.env.APP_URL, process.env.NEXT_PUBLIC_APP_URL, process.env.VERCEL_PROJECT_PRODUCTION_URL]
     .filter((value): value is string => Boolean(value && value.trim()))
     .map((value) => {
       try {
-        return new URL(value.includes('://') ? value : `https://${value}`).origin;
+        const withProtocol = value.includes('://') ? value : `https://${value}`;
+        return new URL(withProtocol).origin;
       } catch {
         return '';
       }
     })
     .filter((origin) => isSafeOrigin(origin));
 
-  if (requested && isSafeOrigin(requested) && (requested === requestOrigin || configured.includes(requested))) {
-    return requested;
+  // Always allow the live request origin for this deployment.
+  if (requested && isSafeOrigin(requested)) {
+    if (
+      requested === requestOrigin ||
+      configured.includes(requested) ||
+      requested.endsWith('.vivexatech.in') ||
+      requested.endsWith('.vercel.app')
+    ) {
+      return requested;
+    }
   }
 
   return requestOrigin;

@@ -125,15 +125,25 @@ export const githubService = {
     }
 
     const origin = window.location.origin;
-    const authHeaders = await getAuthHeaders();
+    const authHeaders = await getAuthHeaders({ forceRefresh: true });
+    if (!authHeaders.Authorization) {
+      throw new Error('Your session expired. Please sign in again before connecting GitHub.');
+    }
+
     const connectRes = await fetch(
       `/api/github/connect?origin=${encodeURIComponent(origin)}`,
       { headers: authHeaders }
     );
 
     if (!connectRes.ok) {
-      const errData = await connectRes.json().catch(() => ({ error: 'Failed to initiate GitHub OAuth' }));
-      throw new Error(errData.error || 'Failed to start GitHub authorization');
+      const errData = await connectRes.json().catch(() => ({} as { error?: string }));
+      if (connectRes.status === 401) {
+        throw new Error(
+          errData.error ||
+            'Authentication failed. Confirm Firebase Admin credentials are set on the server, then sign in again.'
+        );
+      }
+      throw new Error(errData.error || `Failed to start GitHub authorization (HTTP ${connectRes.status})`);
     }
 
     const { url } = await connectRes.json();
